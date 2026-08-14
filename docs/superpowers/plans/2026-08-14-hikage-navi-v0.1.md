@@ -256,7 +256,7 @@ git commit -m "feat: 시부야 거리·경계·평면좌표 유틸을 추가한�
   - `is_night(altitude_deg: float) -> bool`  # `altitude_deg <= 0`
   - `shadow_length_m(height_m: float, altitude_deg: float) -> float`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `api/tests/test_sun.py`:
 
@@ -295,7 +295,7 @@ def test_shadow_length_capped_below_5deg():
     assert abs(shadow_length_m(10.0, 1.0) - expected) < 1e-6
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 ```bash
 cd api && . .venv/bin/activate && pytest tests/test_sun.py -v
@@ -303,7 +303,7 @@ cd api && . .venv/bin/activate && pytest tests/test_sun.py -v
 
 Expected: FAIL — `hikage_navi.sun` not found
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 `api/src/hikage_navi/sun.py`:
 
@@ -334,7 +334,7 @@ def shadow_length_m(height_m: float, altitude_deg: float) -> float:
     return height_m / tan(radians(alt))
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 ```bash
 cd api && . .venv/bin/activate && pytest tests/test_sun.py -v
@@ -342,7 +342,7 @@ cd api && . .venv/bin/activate && pytest tests/test_sun.py -v
 
 Expected: 5 passed. `test_noon_in_august_is_day`의 azimuth 범위가 실패하면 `sun_position`의 +180 보정을 뒤집지 말고, 실제 출력 azimuth를 로그로 확인한 뒤 테스트 범위만 사양(북=0 시계방향, 정오≈남≈180)에 맞게 유지한다. 구현이 남=0을 그대로 두면 안 된다.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add api/src/hikage_navi/sun.py api/tests/test_sun.py
