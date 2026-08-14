@@ -1,0 +1,35 @@
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+# Node
+node_modules/
+dist/
+.vite/
+
+# App data (원본·전처리 산출물은 로컬에만)
+data/raw/
+data/processed/
+*.osm.pbf
+*.gml
+*.citygml
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+*.json.key
+*-credentials.json
+gcp-key.json
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
+
+# Docker
+*.log

@@ -1,0 +1,102 @@
+# 배포 · CI/CD — hikage-navi v0.1
+
+상태: 확정  
+관련: [06-tech-stack.md](06-tech-stack.md)
+
+앱 기능은 노트북만으로 돌아간다.  
+배포는 **웹=Vercel**, **API=GCP** 로 나눈다.
+
+## 1. 왜 나누는가
+
+Vite + React 프론트는 정적 파일이라 Vercel이 가장 단순하다.  
+그늘·경로 API는 Python + 메모리 그래프라 Vercel 서버리스에 맞지 않는다. (시간 제한, 콜드 스타트, 이미지 용량)
+
+GCP에서 배우고 싶은 것(CI/CD, Artifact Registry)은 **API 이미지 한 장**으로 충분하다. 웹까지 Docker로 올리면 학습은 늘지만 운영만 복잡해진다.
+
+```
+프론트: git push → Vercel (정적 사이트)
+API:    git push → Cloud Build → Artifact Registry → Cloud Run
+```
+
+## 2. 웹: Vercel
+
+- 프레임워크: Vite SPA. Next.js로 바꾸지 않는다.
+- 빌드: `npm run build` → `dist/`
+- 환경 변수: `VITE_API_BASE_URL` = Cloud Run API URL
+- GitHub 저장소를 Vercel 프로젝트에 연결. `main` push 시 자동 배포.
+- Hobby 플랜으로 파일럿 가능. Vercel 계정 가입 필요. (GCP와 별개)
+
+브라우저가 국토지리원 타일은 직접 받고, 경로 요청만 Vercel에 올라간 JS가 Cloud Run API로 보낸다.
+
+## 3. API: GCP
+
+| 서비스 | 역할 |
+| --- | --- |
+| **Artifact Registry** | `api` Docker 이미지만 저장 |
+| **Cloud Build** | API 빌드·푸시·Cloud Run 배포 |
+| **Cloud Run** | FastAPI 실행. 최소 인스턴스 0, 메모리 1Gi, `asia-northeast1` |
+
+아티팩트:
+
+```
+asia-northeast1-docker.pkg.dev/<PROJECT>/hikage-navi/api:<git-sha>
+```
+
+전처리 데이터(`data/`)는 **api 이미지 안에** 넣는다. GCS 버킷은 만들지 않는다.
+
+쓰지 않는 것: GKE, Cloud SQL, 웹 Docker 이미지, Terraform.
+
+## 4. CI/CD
+
+### Vercel (웹)
+
+`main` push → 설치 → 빌드 → 배포. Vercel 대시보드에서 연결하면 된다.  
+별도 `Dockerfile.web`은 없다.
+
+### Cloud Build (API)
+
+`main` push (또는 API 경로 변경) 시:
+
+1. 서버 테스트 (없으면 skip)
+2. `api` 이미지 빌드 → Artifact Registry
+3. Cloud Run `hikage-navi-api` 새 리비전
+
+구현 파일: `Dockerfile.api`, `cloudbuild.yaml`
+
+CORS: api는 Vercel origin만 허용. (`https://<project>.vercel.app` 및 커스텀 도메인이 있으면 그것)
+
+GitHub Actions는 쓰지 않는다. 웹 CI는 Vercel, API CI는 Cloud Build.
+
+## 5. 로컬 vs 배포
+
+```
+로컬:  브라우저 → Vite :5173 → FastAPI :8000
+배포:  브라우저 → Vercel     → Cloud Run API
+              ↘ 국토지리원 타일
+```
+
+## 6. 개발 순서
+
+1. 로컬에서 지도·그늘·경로가 돈다
+2. API Dockerfile로 로컬 `docker run`이 된다
+3. GCP: Artifact Registry + Cloud Run에 API를 올린다
+4. Vercel에 웹을 올리고 `VITE_API_BASE_URL`을 Cloud Run URL로 넣는다
+5. Cloud Build로 API 배포를 자동화한다
+
+1이 끝나기 전에 Vercel/GCP를 붙이지 않는다.
+
+## 7. 사람이 준비할 계정
+
+- **Vercel**: 웹 배포. 결제 없이 Hobby로 시작 가능
+- **GCP**: 프로젝트 + 결제 계정. Cloud Build, Artifact Registry, Cloud Run 활성화
+- 저장소에 GCP/Vercel 키 파일을 넣지 않는다
+
+## 8. 수용 (배포 층)
+
+앱 수용기준([05-acceptance.md](05-acceptance.md))과는 별도다.
+
+- [ ] Vercel URL을 열면 시부야 지도가 나온다
+- [ ] 그 페이지에서 경로 탐색이 Cloud Run API를 친다
+- [ ] `main` push 후 Cloud Build가 성공한다
+- [ ] Artifact Registry에 `api` 이미지가 SHA 태그로 있다
+- [ ] 저장소에 클라우드 키 파일이 없다
