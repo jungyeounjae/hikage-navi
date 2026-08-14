@@ -365,7 +365,7 @@ git commit -m "feat: 태양 고도·방위와 그림자 길이를 계산한다"
 
 `footprint_lonlat`은 Shapely Polygon (lon, lat). 높이 < 2 m 건물은 `all_shadows`에서 제외.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `api/tests/test_shadows.py`:
 
@@ -389,7 +389,7 @@ def test_short_building_excluded():
     assert geom.is_empty
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 ```bash
 cd api && . .venv/bin/activate && pytest tests/test_shadows.py -v
@@ -397,7 +397,7 @@ cd api && . .venv/bin/activate && pytest tests/test_shadows.py -v
 
 Expected: FAIL — module not found
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 `api/src/hikage_navi/shadows.py`:
 
@@ -455,7 +455,7 @@ def all_shadows(
 
 `test_shadow_extends_west_when_sun_is_east`가 실패하면 `dx, dy` 부호만 바꿔 태양 반대가 서쪽이 되게 한다. 사양: 꼭짓점을 태양 **반대**로 `L`만큼 이동.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 ```bash
 cd api && . .venv/bin/activate && pytest tests/test_shadows.py tests/test_sun.py tests/test_geo.py -v
@@ -463,7 +463,7 @@ cd api && . .venv/bin/activate && pytest tests/test_shadows.py tests/test_sun.py
 
 Expected: all passed
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add api/src/hikage_navi/shadows.py api/tests/test_shadows.py
