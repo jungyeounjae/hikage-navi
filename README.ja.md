@@ -7,7 +7,7 @@
 韓国の[그늘로](https://ttubeok.com/)を参考にしていますが、公共交通・車窓の日当たり・街路樹は入れません。  
 渋谷区内で出発地と到着地を指定すると、**最短の徒歩ルート**と**日陰が多い徒歩ルート**を比べられます。
 
-いまは**仕様の段階**です。アプリのコードはまだありません。
+仕様は確定済みで、**API コア（地理・太陽・影・グラフ・経路）**の実装が進んでいます。Web UI・実データの前処理は以降のタスクです。
 
 ## v0.1 でやること
 
@@ -51,10 +51,13 @@
 - 建物: [Project PLATEAU](https://www.mlit.go.jp/plateau/)（渋谷区）
 - 道路: [OpenStreetMap](https://www.openstreetmap.org/copyright)
 
+v0.1 の採用・保留（ほこナビDP、街路樹、Cool Share など）は [docs/04-data-algorithm.md](docs/04-data-algorithm.md) §1.6 を参照。
+
 ## 進捗
 
 - [x] 要件・機能仕様
-- [ ] ローカルの Web + API
+- [x] API コア（タスク 1–5: geo・sun・shadows・graph・routing）
+- [ ] FastAPI サービス・Web UI・実データ（タスク 6–10）
 - [ ] Docker（API）
 - [ ] Cloud Run + Artifact Registry
 - [ ] Vercel

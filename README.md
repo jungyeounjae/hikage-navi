@@ -7,7 +7,7 @@
 한국의 [그늘로](https://ttubeok.com/)를 참고하되, 대중교통·버스 창가·가로수는 넣지 않습니다.  
 시부야구 안에서 출발·도착을 찍으면 **최단 도보**와 **그늘이 더 많은 도보**를 비교합니다.
 
-현재는 **사양 단계**입니다. 앱 코드는 아직 없습니다.
+사양은 확정되어 있고, **API 코어(지리·태양·그림자·그래프·경로)** 구현이 진행 중입니다. 웹 UI·실데이터 전처리는 이후 태스크입니다.
 
 ## 하는 일 (v0.1)
 
@@ -51,10 +51,13 @@
 - 건물: [Project PLATEAU](https://www.mlit.go.jp/plateau/) (渋谷区)
 - 도로: [OpenStreetMap](https://www.openstreetmap.org/copyright)
 
+v0.1 채택·보류(ほこナビDP, 가로수, Cool Share 등)는 [docs/04-data-algorithm.md](docs/04-data-algorithm.md) §1.6을 본다.
+
 ## 상태
 
 - [x] 요건·기능 사양
-- [ ] 로컬 웹 + API
+- [x] API 코어 (태스크 1–5: geo·sun·shadows·graph·routing)
+- [ ] FastAPI 서비스·웹 UI·실데이터 (태스크 6–10)
 - [ ] Docker (API)
 - [ ] Cloud Run + Artifact Registry
 - [ ] Vercel

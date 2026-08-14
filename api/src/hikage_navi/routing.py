@@ -101,8 +101,13 @@ def _path(
     return _metrics(graph, nodes, shadows)
 
 
-def shortest_path(graph: WalkGraph, src: int, dst: int) -> PathResult:
-    return _path(graph, src, dst, lambda e: e.length_m, shadows=None)
+def shortest_path(
+    graph: WalkGraph,
+    src: int,
+    dst: int,
+    shadows: BaseGeometry | None = None,
+) -> PathResult:
+    return _path(graph, src, dst, lambda e: e.length_m, shadows=shadows)
 
 
 def shadiest_path(

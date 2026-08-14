@@ -30,6 +30,16 @@ def test_shortest_1_to_3():
     assert result.shade_pct == 0
 
 
+def test_shortest_reports_shade_when_shadows_given():
+    g = load_walk_graph(FIXTURE)
+    # 픽스처 노드 1–2–3 주변을 덮는 그림자 → 최단도 그늘%를 채운다
+    shadow = box(139.7010, 35.6575, 139.7030, 35.6590)
+    result = shortest_path(g, 1, 3, shadows=shadow)
+    assert result.node_ids == [1, 2, 3]
+    assert result.shade_pct > 0
+    assert result.shade_m > 0
+
+
 def test_disconnected_raises():
     g = load_walk_graph(FIXTURE)
     g.edges = g.edges[:1]

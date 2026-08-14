@@ -645,14 +645,15 @@ git commit -m "feat: 보행 그래프 로드와 75m 스냅을 추가한다"
 - Produces:
   - `@dataclass PathResult`: `node_ids: list[int]`, `coords: list[tuple[float, float]]`, `distance_m: int`, `duration_min: int`, `shade_m: int`, `sun_m: int`, `shade_pct: int`
   - `edge_shade_split(edge: Edge, shadows) -> tuple[float, float]`  # D_shade, D_sun
-  - `shortest_path(graph: WalkGraph, src: int, dst: int) -> PathResult`
+  - `shortest_path(graph: WalkGraph, src: int, dst: int, shadows=None) -> PathResult`
   - `shadiest_path(graph: WalkGraph, src: int, dst: int, shadows) -> PathResult`
   - `class DisconnectedError(Exception)`
 
 `duration_min`: `math.ceil(distance_m / WALK_M_PER_MIN)` 단 `distance_m == 0`이면 0.  
 `shade_pct`: `round(100 * shade_m / distance_m)` 단 거리 0이면 0.  
 무방향: 각 Edge를 u–v, v–u 둘 다 쓴다.  
-최단 `W = length_m`. 그늘 `W = D_shade + 3 * D_sun`.
+최단 `W = length_m`. 그늘 `W = D_shade + 3 * D_sun`.  
+주간에는 최단에도 `shadows`를 넘겨 `shade_pct`를 채운다(가중치는 거리만).
 
 - [x] **Step 1: Write the failing test**
 
@@ -1148,8 +1149,9 @@ def plan_routes(
         raise RouteError("disconnected", "この2点を歩くルートが見つかりません")
     alt, az = sun_position(dt)
     night = is_night(alt)
+    shadows = None if night else all_shadows(buildings, alt, az)
     try:
-        shortest = shortest_path(graph, src, dst)
+        shortest = shortest_path(graph, src, dst, shadows=shadows)
     except DisconnectedError as exc:
         raise RouteError("disconnected", "この2点を歩くルートが見つかりません") from exc
     if night:
@@ -1161,7 +1163,6 @@ def plan_routes(
             long_detour=False,
             warning=None,
         )
-    shadows = all_shadows(buildings, alt, az)
     shadiest = shadiest_path(graph, src, dst, shadows)
     same = shortest.node_ids == shadiest.node_ids
     long_detour = shadiest.distance_m > int(shortest.distance_m * 1.5)
