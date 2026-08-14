@@ -499,7 +499,7 @@ JSON 스키마:
 
 `length_m`은 로드 시 coords 구간 하버사인 합으로 계산한다.
 
-- [ ] **Step 1: Write fixture and failing test**
+- [x] **Step 1: Write fixture and failing test**
 
 `data/fixtures/shibuya-walk-graph.json`:
 
@@ -549,7 +549,7 @@ def test_snap_too_far_raises():
         snap_to_node(g, 139.71000, 35.67000)
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 ```bash
 cd api && . .venv/bin/activate && pytest tests/test_graph.py -v
@@ -557,7 +557,7 @@ cd api && . .venv/bin/activate && pytest tests/test_graph.py -v
 
 Expected: FAIL — module not found
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 `api/src/hikage_navi/graph.py`:
 
@@ -616,7 +616,7 @@ def snap_to_node(graph: WalkGraph, lon: float, lat: float) -> tuple[int, float]:
     return best_id, best_d
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 ```bash
 cd api && . .venv/bin/activate && pytest tests/test_graph.py -v
@@ -624,7 +624,7 @@ cd api && . .venv/bin/activate && pytest tests/test_graph.py -v
 
 Expected: 3 passed
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add api/src/hikage_navi/graph.py api/tests/test_graph.py data/fixtures/shibuya-walk-graph.json
