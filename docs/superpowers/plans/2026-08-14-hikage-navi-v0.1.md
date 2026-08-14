@@ -1347,9 +1347,7 @@ git commit -m "feat: 경로 검증과 FastAPI /routes /shadows를 추가한다"
   - `reduce(state, action) -> AppState`
   - phases: `S0` `S1` `S2` `S3` `S4` `S5`
 
-- [ ] **Step 1: Write the failing test**
-
-`web/src/state.test.ts`:
+- [x] **Step 1: Write the failing test**
 
 ```ts
 import { describe, expect, it } from "vitest";
@@ -1422,7 +1420,7 @@ export default defineConfig({
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 ```bash
 cd web && npm install && npm test
@@ -1430,7 +1428,7 @@ cd web && npm install && npm test
 
 Expected: FAIL — `./state` not found
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 `web/src/copy.ts` — 화면사양 문안 그대로:
 
