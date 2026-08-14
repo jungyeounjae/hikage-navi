@@ -654,7 +654,7 @@ git commit -m "feat: 보행 그래프 로드와 75m 스냅을 추가한다"
 무방향: 각 Edge를 u–v, v–u 둘 다 쓴다.  
 최단 `W = length_m`. 그늘 `W = D_shade + 3 * D_sun`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `data/fixtures/shibuya-buildings.geojson` — 노드 2 근처 높은 건물 하나:
 
@@ -696,10 +696,13 @@ FIXTURE = Path(__file__).resolve().parents[2] / "data/fixtures/shibuya-walk-grap
 
 
 def test_full_edge_in_shadow():
-    e = Edge(u=1, v=2, coords=[(0.0, 0.0), (0.001, 0.0)], length_m=100.0)
-    shadow = box(-1, -1, 1, 1)
+    # EPSG:6677은 일본 구역용 — 시부야 근처 좌표로 검증
+    coords = [(139.7016, 35.6580), (139.7027, 35.6580)]
+    length = haversine_m(*coords[0], *coords[1])
+    e = Edge(u=1, v=2, coords=coords, length_m=length)
+    shadow = box(139.70, 35.65, 139.71, 35.66)
     d_shade, d_sun = edge_shade_split(e, shadow)
-    assert d_shade == pytest.approx(100.0, rel=0.05)
+    assert d_shade == pytest.approx(length, rel=0.05)
     assert d_sun == pytest.approx(0.0, abs=5.0)
 
 
@@ -719,7 +722,7 @@ def test_disconnected_raises():
         shortest_path(g, 1, 3)
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 ```bash
 cd api && . .venv/bin/activate && pytest tests/test_routing.py -v
@@ -727,7 +730,7 @@ cd api && . .venv/bin/activate && pytest tests/test_routing.py -v
 
 Expected: FAIL — module not found
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 `api/src/hikage_navi/routing.py`:
 
@@ -839,7 +842,7 @@ def shadiest_path(graph: WalkGraph, src: int, dst: int, shadows: BaseGeometry) -
     return _path(graph, src, dst, w, shadows)
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 ```bash
 cd api && . .venv/bin/activate && pytest tests/test_routing.py tests/test_graph.py -v
@@ -847,7 +850,7 @@ cd api && . .venv/bin/activate && pytest tests/test_routing.py tests/test_graph.
 
 Expected: all passed
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add api/src/hikage_navi/routing.py api/tests/test_routing.py data/fixtures/shibuya-buildings.geojson
