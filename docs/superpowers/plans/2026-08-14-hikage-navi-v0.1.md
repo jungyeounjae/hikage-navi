@@ -895,7 +895,7 @@ git commit -m "feat: 최단·그늘 가중 다익스트라를 추가한다"
 
 데이터 디렉터리: 환경변수 `HIKAGE_DATA_DIR`, 기본 `data/processed`, 없으면 `data/fixtures`.
 
-- [ ] **Step 1: Write fixtures and failing tests**
+- [x] **Step 1: Write fixtures and failing tests**
 
 `data/fixtures/shibuya-boundary.geojson` — 시부야 대략 bbox (실제 행정경계는 Task 9에서 교체):
 
@@ -1039,7 +1039,7 @@ def test_routes_outside_400():
     assert res.json()["code"] == "outside"
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 ```bash
 cd api && . .venv/bin/activate && pytest tests/test_service.py tests/test_app.py -v
@@ -1047,7 +1047,7 @@ cd api && . .venv/bin/activate && pytest tests/test_service.py tests/test_app.py
 
 Expected: FAIL — modules not found
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 `api/src/hikage_navi/errors.py`:
 
@@ -1308,7 +1308,7 @@ app = create_app()
 
 FastAPI `HTTPException(detail=dict)`는 클라이언트가 `{"detail": {...}}`로 받는다. `test_routes_outside_400`는 `res.json()["detail"]["code"]`를 검사하도록 테스트를 맞춘다.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 ```bash
 cd api && . .venv/bin/activate && pytest tests/ -v
@@ -1316,7 +1316,7 @@ cd api && . .venv/bin/activate && pytest tests/ -v
 
 Expected: all passed
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add api/src/hikage_navi/errors.py api/src/hikage_navi/schemas.py api/src/hikage_navi/service.py api/src/hikage_navi/app.py api/tests/conftest.py api/tests/test_service.py api/tests/test_app.py data/fixtures/shibuya-boundary.geojson
