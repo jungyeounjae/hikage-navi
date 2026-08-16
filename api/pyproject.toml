@@ -18,7 +18,11 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "httpx>=0.27"]
-preprocess = ["geopandas>=1.0", "osmnx>=1.9"]
+preprocess = [
+  "geopandas>=1.0",
+  "osmnx>=1.9",
+  "pyrosm>=0.6; python_version < '3.13'",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]

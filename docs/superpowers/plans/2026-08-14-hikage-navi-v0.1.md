@@ -1813,7 +1813,7 @@ git commit -m "feat: 지도와 경로 API를 한 화면에 연결한다"
 
 이 태스크가 끝나야 수용기준 C(하치코–요요기)를 실도로에서 검증할 수 있다. 픽스처만으로는 하치코 경로가 없다.
 
-- [ ] **Step 1: Write preprocess script**
+- [x] **Step 1: Write preprocess script**
 
 `api/scripts/preprocess.py`는 다음을 수행한다.
 
@@ -1832,7 +1832,7 @@ python scripts/preprocess.py
 
 공개 Nominatim 데모에 대량 경로 요청을 보내지 말 것. `geocode_to_gdf` 한 번은 허용(경계 폴리곤). 보행 그래프는 로컬 PBF에서 만든다.
 
-- [ ] **Step 2: Run script**
+- [x] **Step 2: Run script**
 
 ```bash
 cd api && . .venv/bin/activate && python scripts/preprocess.py
@@ -1840,7 +1840,7 @@ cd api && . .venv/bin/activate && python scripts/preprocess.py
 
 Expected: `data/processed/shibuya-walk-graph.json` 존재, 노드 수 > 1000, 건물 Feature > 1000
 
-- [ ] **Step 3: Point API at processed data and smoke-test**
+- [x] **Step 3: Point API at processed data and smoke-test**
 
 ```bash
 export HIKAGE_DATA_DIR=/Users/yeounjaejung/hikage-navi/data/processed
@@ -1849,7 +1849,7 @@ cd api && . .venv/bin/activate && uvicorn hikage_navi.app:app --port 8000
 
 하치코 근처 `139.7005, 35.6590` 부근과 요요기공원 동쪽 `139.7023, 35.6710`이 구 안·3km인지 확인 후 POST `/routes`. 구 밖이면 요요기 대신 에비스 `139.7100, 35.6467`을 쓴다(수용기준 C).
 
-- [ ] **Step 4: Commit script only, not raw/processed**
+- [x] **Step 4: Commit script only, not raw/processed**
 
 ```bash
 git add api/scripts/preprocess.py api/scripts/README.md
