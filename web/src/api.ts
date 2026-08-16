@@ -1,4 +1,4 @@
-import type { PathDto, Pin, RouteResponse } from "./types";
+import type { Bbox, PathDto, Pin, RouteResponse } from "./types";
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 
@@ -7,12 +7,17 @@ export async function fetchBoundary(): Promise<GeoJSON.GeoJSON> {
   return res.json();
 }
 
+export function shadowsQuery(iso: string, bbox?: Bbox): string {
+  const params = new URLSearchParams({ datetime: iso });
+  if (bbox) params.set("bbox", bbox.map((v) => v.toFixed(4)).join(","));
+  return params.toString();
+}
+
 export async function fetchShadows(
   iso: string,
+  bbox?: Bbox,
 ): Promise<GeoJSON.FeatureCollection> {
-  const res = await fetch(
-    `${BASE}/shadows?datetime=${encodeURIComponent(iso)}`,
-  );
+  const res = await fetch(`${BASE}/shadows?${shadowsQuery(iso, bbox)}`);
   return res.json();
 }
 

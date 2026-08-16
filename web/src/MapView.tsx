@@ -2,7 +2,7 @@ import { useEffect, useRef, type MutableRefObject } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { copy } from "./copy";
-import type { AppState, Pin } from "./types";
+import type { AppState, Bbox, Pin } from "./types";
 import { pointInBoundary } from "./geo";
 
 type Props = {
@@ -12,6 +12,7 @@ type Props = {
   mapReady: boolean;
   onMapReady: () => void;
   onTap: (point: Pin) => void;
+  onViewportChange: (bbox: Bbox) => void;
 };
 
 const EMPTY: GeoJSON.FeatureCollection = {
@@ -41,6 +42,7 @@ export function MapView({
   mapReady,
   onMapReady,
   onTap,
+  onViewportChange,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -124,7 +126,20 @@ export function MapView({
       });
 
       onMapReady();
+      reportViewport();
     });
+
+    function reportViewport() {
+      const b = map.getBounds();
+      onViewportChange([
+        b.getWest(),
+        b.getSouth(),
+        b.getEast(),
+        b.getNorth(),
+      ]);
+    }
+
+    map.on("moveend", reportViewport);
 
     map.on("click", (e) => {
       const lon = e.lngLat.lng;
@@ -140,7 +155,7 @@ export function MapView({
       map.remove();
       mapRef.current = null;
     };
-  }, [onMapReady, onTap]);
+  }, [onMapReady, onTap, onViewportChange]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -194,19 +209,21 @@ export function MapView({
         ref.current = null;
         return;
       }
-      const el = document.createElement("div");
-      el.className = pin.inBoundary ? "pin" : "pin pin-out";
-      el.textContent = label;
       if (!ref.current) {
-        ref.current = new maplibregl.Marker({ element: el })
+        // MapLibre가 루트 요소에 위치용 클래스를 붙인다. 라벨은 안쪽에 둔다
+        const root = document.createElement("div");
+        const labelEl = document.createElement("div");
+        labelEl.className = "pin";
+        labelEl.textContent = label;
+        root.appendChild(labelEl);
+        ref.current = new maplibregl.Marker({ element: root })
           .setLngLat([pin.lon, pin.lat])
           .addTo(map!);
       } else {
         ref.current.setLngLat([pin.lon, pin.lat]);
-        const node = ref.current.getElement();
-        node.className = pin.inBoundary ? "pin" : "pin pin-out";
-        node.textContent = label;
       }
+      const labelEl = ref.current.getElement().querySelector(".pin");
+      labelEl?.classList.toggle("pin-out", !pin.inBoundary);
     }
 
     setMarker(originMarker, state.origin, "出発");

@@ -117,6 +117,8 @@ body,
 }
 
 .pin {
+  display: inline-block;
+  width: max-content;
   background: var(--accent);
   color: #fff;
   padding: 0.25rem 0.45rem;
@@ -124,6 +126,7 @@ body,
   font-weight: 700;
   border-radius: 2px;
   white-space: nowrap;
+  pointer-events: none;
 }
 
 .pin-out {

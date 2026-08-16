@@ -1,5 +1,6 @@
 from math import asin, cos, radians, sin, sqrt
 
+import numpy as np
 from pyproj import Transformer
 from shapely.geometry import Point
 from shapely.geometry.base import BaseGeometry
@@ -27,6 +28,31 @@ def to_planar(lon: float, lat: float) -> tuple[float, float]:
 def from_planar(x: float, y: float) -> tuple[float, float]:
     lon, lat = _FROM_PLANAR.transform(x, y)
     return float(lon), float(lat)
+
+
+def to_planar_array(coords):
+    """(N, 2) 경위도 배열 → 평면좌표 배열. 좌표별 호출 오버헤드를 없앤다."""
+    x, y = _TO_PLANAR.transform(coords[:, 0], coords[:, 1])
+    return np.column_stack([x, y])
+
+
+def from_planar_array(coords):
+    lon, lat = _FROM_PLANAR.transform(coords[:, 0], coords[:, 1])
+    return np.column_stack([lon, lat])
+
+
+def bbox_of(points) -> tuple[float, float, float, float]:
+    lons = [p[0] for p in points]
+    lats = [p[1] for p in points]
+    return min(lons), min(lats), max(lons), max(lats)
+
+
+def expand_bbox(bbox, margin_m: float) -> tuple[float, float, float, float]:
+    min_lon, min_lat, max_lon, max_lat = bbox
+    dlat = margin_m / 111_320.0
+    mid_lat = radians((min_lat + max_lat) / 2)
+    dlon = margin_m / max(1.0, 111_320.0 * cos(mid_lat))
+    return min_lon - dlon, min_lat - dlat, max_lon + dlon, max_lat + dlat
 
 
 def point_in_boundary(lon: float, lat: float, boundary: BaseGeometry) -> bool:

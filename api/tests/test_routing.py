@@ -5,7 +5,13 @@ from shapely.geometry import box
 
 from hikage_navi.geo import haversine_m
 from hikage_navi.graph import Edge, load_walk_graph
-from hikage_navi.routing import DisconnectedError, edge_shade_split, shortest_path
+from hikage_navi.routing import (
+    DisconnectedError,
+    edge_shade_split,
+    shadiest_path,
+    shortest_path,
+)
+from hikage_navi.shadows import ShadowIndex
 
 FIXTURE = Path(__file__).resolve().parents[2] / "data/fixtures/shibuya-walk-graph.json"
 
@@ -38,6 +44,24 @@ def test_shortest_reports_shade_when_shadows_given():
     assert result.node_ids == [1, 2, 3]
     assert result.shade_pct > 0
     assert result.shade_m > 0
+
+
+def test_shade_split_accepts_shadow_index():
+    coords = [(139.7016, 35.6580), (139.7027, 35.6580)]
+    e = Edge(u=1, v=2, coords=coords, length_m=haversine_m(*coords[0], *coords[1]))
+    shadow = box(139.70, 35.65, 139.7020, 35.66)
+    from_geom = edge_shade_split(e, shadow)
+    from_index = edge_shade_split(e, ShadowIndex.from_geometry(shadow))
+    assert from_index[0] == pytest.approx(from_geom[0], abs=5.0)
+    assert from_index[1] == pytest.approx(from_geom[1], abs=5.0)
+
+
+def test_shadiest_accepts_shadow_index():
+    g = load_walk_graph(FIXTURE)
+    index = ShadowIndex.from_geometry(box(139.7010, 35.6575, 139.7030, 35.6590))
+    result = shadiest_path(g, 1, 3, index)
+    assert result.node_ids == [1, 2, 3]
+    assert result.shade_pct > 0
 
 
 def test_disconnected_raises():

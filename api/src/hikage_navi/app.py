@@ -5,7 +5,7 @@ import os
 from datetime import datetime
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 from shapely.geometry import mapping, shape
 
@@ -13,10 +13,23 @@ from hikage_navi.errors import RouteError
 from hikage_navi.graph import load_walk_graph
 from hikage_navi.schemas import PathDto, RouteRequest, RouteResponse
 from hikage_navi.service import plan_routes
-from hikage_navi.shadows import all_shadows
+from hikage_navi.shadows import BuildingIndex, ShadowIndex, shadow_margin_m
 from hikage_navi.sun import is_night, sun_position
 
 ROOT = Path(__file__).resolve().parents[3]
+SHADOW_CACHE_SIZE = 8
+
+
+def parse_bbox(value: str | None) -> tuple[float, float, float, float] | None:
+    if not value:
+        return None
+    parts = [float(v) for v in value.split(",")]
+    if len(parts) != 4:
+        raise HTTPException(
+            status_code=400,
+            detail={"code": "bbox", "message": "bbox=minLon,minLat,maxLon,maxLat"},
+        )
+    return parts[0], parts[1], parts[2], parts[3]
 
 
 def data_dir() -> Path:
@@ -34,10 +47,12 @@ def load_ctx():
     graph = load_walk_graph(d / "shibuya-walk-graph.json")
     boundary = shape(json.loads((d / "shibuya-boundary.geojson").read_text())["geometry"])
     buildings_raw = json.loads((d / "shibuya-buildings.geojson").read_text())
-    buildings = [
-        (shape(f["geometry"]), float(f["properties"]["height"]))
-        for f in buildings_raw["features"]
-    ]
+    buildings = BuildingIndex(
+        [
+            (shape(f["geometry"]), float(f["properties"]["height"]))
+            for f in buildings_raw["features"]
+        ]
+    )
     return graph, boundary, buildings
 
 
@@ -56,11 +71,26 @@ def create_app() -> FastAPI:
     app = FastAPI()
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["http://localhost:5173"],
+        allow_origin_regex=r"http://(localhost|127\.0\.0\.1)(:\d+)?",
         allow_methods=["*"],
         allow_headers=["*"],
     )
     graph, boundary, buildings = load_ctx()
+    rendered: dict[tuple, object] = {}
+
+    def shadow_geometry(alt: float, az: float, window):
+        """같은 시각·같은 화면이면 다시 계산하지 않는다 (union이 수 초 걸린다)."""
+        key = (round(alt, 1), round(az, 1), tuple(round(v, 4) for v in window))
+        if key not in rendered:
+            if len(rendered) >= SHADOW_CACHE_SIZE:
+                rendered.pop(next(iter(rendered)))
+            selected = buildings.select(
+                window, margin_m=shadow_margin_m(alt, buildings.max_height_m)
+            )
+            rendered[key] = ShadowIndex.from_buildings(selected, alt, az).union_lonlat(
+                bbox=window
+            )
+        return rendered[key]
 
     @app.get("/health")
     def health():
@@ -71,19 +101,24 @@ def create_app() -> FastAPI:
         return json.loads((data_dir() / "shibuya-boundary.geojson").read_text())
 
     @app.get("/shadows")
-    def shadows_ep(datetime: str = Query(...)):
-        dt = datetime_from_iso(datetime)
-        alt, az = sun_position(dt)
+    def shadows_ep(datetime: str = Query(...), bbox: str | None = Query(None)):
+        alt, az = sun_position(datetime_from_iso(datetime))
         if is_night(alt):
             return {"type": "FeatureCollection", "features": [], "night": True}
-        geom = all_shadows(buildings, alt, az)
-        return {
-            "type": "FeatureCollection",
-            "night": False,
-            "features": [
-                {"type": "Feature", "properties": {}, "geometry": mapping(geom)}
-            ],
-        }
+        window = parse_bbox(bbox) or boundary.bounds
+        geom = shadow_geometry(alt, az, window)
+        features = (
+            []
+            if geom.is_empty
+            else [{"type": "Feature", "properties": {}, "geometry": mapping(geom)}]
+        )
+        # 좌표 수십만 개를 FastAPI 기본 인코더에 태우면 응답에만 수 초 걸린다
+        return Response(
+            content=json.dumps(
+                {"type": "FeatureCollection", "night": False, "features": features}
+            ),
+            media_type="application/json",
+        )
 
     @app.post("/routes", response_model=RouteResponse)
     def routes(req: RouteRequest):

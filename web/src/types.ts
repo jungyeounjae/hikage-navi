@@ -2,6 +2,9 @@ export type Phase = "S0" | "S1" | "S2" | "S3" | "S4" | "S5";
 
 export type Pin = { lon: number; lat: number; inBoundary: boolean };
 
+/** minLon, minLat, maxLon, maxLat */
+export type Bbox = [number, number, number, number];
+
 export type PathDto = {
   coordinates: [number, number][];
   distance_m: number;

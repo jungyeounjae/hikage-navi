@@ -10,8 +10,13 @@ import { MapView } from "./MapView";
 import { Panel } from "./Panel";
 import { TopBar } from "./TopBar";
 import { initialState, reduce } from "./state";
-import type { Pin } from "./types";
+import type { Bbox, Pin } from "./types";
 import "./styles.css";
+
+/** 지도를 아주 조금 움직였다고 그림자를 다시 받지는 않는다 */
+function sameViewport(a: Bbox, b: Bbox): boolean {
+  return a.every((v, i) => Math.abs(v - b[i]) < 0.0005);
+}
 
 export function App() {
   const [state, dispatch] = useReducer(reduce, undefined, initialState);
@@ -20,10 +25,14 @@ export function App() {
     null,
   );
   const [mapReady, setMapReady] = useState(false);
+  const [viewport, setViewport] = useState<Bbox | null>(null);
   const [loading, setLoading] = useState(false);
   const [night, setNight] = useState(false);
 
   const onMapReady = useCallback(() => setMapReady(true), []);
+  const onViewportChange = useCallback((bbox: Bbox) => {
+    setViewport((prev) => (prev && sameViewport(prev, bbox) ? prev : bbox));
+  }, []);
   const onTap = useCallback((point: Pin) => {
     dispatch({ type: "MAP_TAP", point });
   }, []);
@@ -37,9 +46,10 @@ export function App() {
   }, []);
 
   useEffect(() => {
+    if (!viewport) return;
     const iso = localInputToIso(state.datetimeLocal);
     let cancelled = false;
-    fetchShadows(iso)
+    fetchShadows(iso, viewport)
       .then((fc) => {
         if (cancelled) return;
         setNight(Boolean((fc as { night?: boolean }).night));
@@ -55,7 +65,7 @@ export function App() {
     return () => {
       cancelled = true;
     };
-  }, [state.datetimeLocal]);
+  }, [state.datetimeLocal, viewport]);
 
   async function runSearch(origin: Pin, destination: Pin, datetimeLocal: string) {
     setLoading(true);
@@ -98,6 +108,7 @@ export function App() {
         mapReady={mapReady}
         onMapReady={onMapReady}
         onTap={onTap}
+        onViewportChange={onViewportChange}
       />
       <Panel
         state={state}

@@ -39,6 +39,18 @@ def load_walk_graph(path: Path) -> WalkGraph:
     return WalkGraph(nodes=nodes, edges=edges)
 
 
+def subgraph_in_bbox(graph: WalkGraph, bbox: tuple[float, float, float, float]) -> WalkGraph:
+    """양 끝점이 bbox 안에 있는 간선만 남긴다."""
+    min_lon, min_lat, max_lon, max_lat = bbox
+    nodes = {
+        nid: (lon, lat)
+        for nid, (lon, lat) in graph.nodes.items()
+        if min_lon <= lon <= max_lon and min_lat <= lat <= max_lat
+    }
+    edges = [e for e in graph.edges if e.u in nodes and e.v in nodes]
+    return WalkGraph(nodes=nodes, edges=edges)
+
+
 def snap_to_node(graph: WalkGraph, lon: float, lat: float) -> tuple[int, float]:
     best_id = None
     best_d = float("inf")
