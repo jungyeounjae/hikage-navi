@@ -1869,7 +1869,7 @@ git commit -m "feat: 시부야 PLATEAU·OSM 전처리 스크립트를 추가한�
 - Consumes: 로컬 웹+API+processed 데이터
 - Produces: 수용기준 A–E 통과. F(전철·계정)가 제품에 없음.
 
-- [ ] **Step 1: Start stack**
+- [x] **Step 1: Start stack**
 
 ```bash
 # terminal 1
@@ -1879,35 +1879,306 @@ cd /Users/yeounjaejung/hikage-navi/api && . .venv/bin/activate && uvicorn hikage
 cd /Users/yeounjaejung/hikage-navi/web && npm run dev
 ```
 
-- [ ] **Step 2: Walk docs/05-acceptance.md A–E**
+2026-08-16 확인: API `8000`·웹 `5173` 기동, `/health` 200.
 
-고정 점(처리 후 스냅이 되면 그대로, 실패하면 75 m 안 보도로 1회만 조정):
+- [x] **Step 2: Walk docs/05-acceptance.md A–E**
 
-- 출발: 139.70056, 35.65905 (하치코 출구 부근)
-- 도착: 139.7024, 35.6712 (요요기공원 동쪽) — 구 밖/3 km 초과면 139.7104, 35.6467 (에비스)
+**검증 좌표 (2026-08-16, processed 실데이터):**
 
-확인: 주간 두 경로, 그늘%, 10:00 vs 16:00 그림자 방향, 야간 그늘 없음, 구 밖 거절 문안, 3 km 거절, 스냅 실패 문안, 새로고침 시 핀 소실, 로그인 없음, 출처 표시, Nominatim/OSRM 네트워크 탭에 없음, UI 일본어.
+| 용도 | lon, lat | 비고 |
+| --- | --- | --- |
+| 출발 | 139.70056, 35.65905 | 하치코 출구 부근 |
+| 도착 (경로 C) | 139.7024, 35.6712 | 요요기공원 동쪽 — 구 안·3 km 이내라 채택 |
+| 3 km 거절 | 139.70056, 35.65905 → 139.66467, 35.67349 | 직선 ≈ 3618 m, `too_far` |
+| 스냅 실패 | 139.69506, 35.67657 | 그래프에서 ≈ 179 m, `snap` |
+| 구 밖 | 139.0, 35.0 → 하치코 | `outside` |
 
-- [ ] **Step 3: Run full automated suite once more**
+**경로 C 주간(2026-08-14 12:00 JST) API:** 최단 1430 m / 그늘 0%, 그늘경로 1814 m / 그늘 42%.  
+**브라우저(역 일대 단거리):** 최단 326 m · 日陰 18% / 日陰 327 m · 日陰 77%. 16:00로 바꾸면 93% / 100%로 재계산.
+
+확인 완료: 주간 두 경로·그늘%, 10:00 vs 16:00 그림자(정점 수·형상 차이), 야간 그림자 없음·야간 최단만, 구 밖/3 km/스냅 일본어 문안, 탭 두 번 핀, 시각 변경 재계산, 새로고침 핀·경로 소실, 로그인 없음, 출처 표시, Nominatim/OSRM 네트워크 없음, UI 일본어. F(전철·계정) 없음.
+
+- [x] **Step 3: Run full automated suite once more**
 
 ```bash
 cd /Users/yeounjaejung/hikage-navi/api && . .venv/bin/activate && pytest tests/ -v
 cd /Users/yeounjaejung/hikage-navi/web && npm test && npm run build
 ```
 
-Expected: all passed
+Expected: all passed — **37 API + 7 web passed, `npm run build` ok** (2026-08-16).
 
-- [ ] **Step 4: Commit nothing unless copy/bugfix files changed**
+- [x] **Step 4: Commit nothing unless copy/bugfix files changed**
 
 버그 수정이 있으면 해당 파일만 커밋. 수정이 없으면 커밋하지 않는다.
+
+수용 검증만 했고 코드 변경 없음 → 커밋 없음. 계획 문서의 이 섹션 기록만 갱신.
+
+---
+
+## Next phase (Task 11–14)
+
+v0.1(시부야·로컬) 완료 후 이어서 한다. Global Constraints의 「시부야구만」은 Task 12부터 **東京23区**로 대체한다. 네이티브 앱스토어 배포는 하지 않는다(모바일 = 스마트폰 브라우저).
+
+**Architecture (23구):** 전처리 산출물을 구(区) 단위로 나누고, API는 요청 corridor에 걸린 구의 건물만 로드한다. 보행 그래프는 23구 경계로 한 번 만들어 두고, 기존처럼 `subgraph_in_bbox`로 줄인다. 전 구 건물을 기동 시 전부 메모리에 올리지 않는다.
+
+---
+
+### Task 11: 모바일 웹 UI
+
+**Files:**
+- Modify: `web/index.html` (viewport / theme-color)
+- Modify: `web/src/styles.css` (좁은 화면·safe-area·터치)
+- Modify: `web/src/TopBar.tsx`, `web/src/Panel.tsx`, `web/src/App.tsx` (필요 시 레이아웃 클래스만)
+- Modify: `docs/03-ui-spec.md` §1에 모바일 수용 메모 1단락
+- Test: 수동(실기기 또는 DevTools 375×812). 자동 테스트는 레이아웃 회귀용 CSS 클래스 존재 확인 정도로 최소
+
+**Interfaces:**
+- Consumes: 기존 S0–S5 패널·지도 동작
+- Produces: 폭 ≤ 430px에서도 지도·핀·경로·탐색이 한 손 조작 가능. 데스크톱(≥900px) 기존 2열 유지
+
+**수용 (수동):**
+1. iPhone SE / Pixel 폭(≈375px)에서 TopBar가 두 줄로 접혀도 날짜·시각 입력 가능
+2. 하단 패널이 지도의 40% 이상을 가리지 않거나, 접기/스크롤로 지도를 볼 수 있음
+3. 모든 주요 버튼·입력 `min-height: 44px`, 탭 타깃이 서로 겹치지 않음
+4. `env(safe-area-inset-*)`로 노치·홈 인디케이터에 가리지 않음
+5. 지도 탭으로 출발·도착·탐색이 데스크톱과 동일하게 동작
+6. 가로 모드에서도 지도가 0높이가 되지 않음
+
+- [ ] **Step 1: viewport와 safe-area 뼈대**
+
+`web/index.html`에 확인:
+
+```html
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+```
+
+`styles.css`의 `.app` / `.topbar` / `.panel` / `.attribution`에 `padding`이 `max(기존, env(safe-area-inset-*))`를 쓰도록 수정.
+
+- [ ] **Step 2: 좁은 화면 TopBar·패널**
+
+폭 < 900px에서:
+- TopBar: 제목 행 + 날짜·시각 행으로 `flex-wrap`
+- Panel: 하단 고정, `max-height: min(42vh, 320px); overflow-y: auto`
+- `.datetime input`, 버튼류: `min-height: 44px; font-size: 16px` (iOS 줌 방지)
+
+- [ ] **Step 3: DevTools로 수동 검증**
+
+Chrome DevTools → iPhone 12 / Galaxy S20 프리셋에서 S0→S3까지 한 사이클.  
+Expected: 위 수용 1–6 통과.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add web/index.html web/src/styles.css web/src/TopBar.tsx web/src/Panel.tsx web/src/App.tsx docs/03-ui-spec.md
+git commit -m "$(cat <<'EOF'
+feat: 스마트폰 브라우저에서 지도·패널을 쓸 수 있게 한다
+
+EOF
+)"
+```
+
+---
+
+### Task 12: 東京23区 범위 — 경계·카피·API 문안
+
+**Files:**
+- Create: `api/src/hikage_navi/wards.py` — 23구 코드·표시명 상수
+- Modify: `api/src/hikage_navi/errors.py` / `service.py` — `outside` 메시지
+- Modify: `web/src/copy.ts` — 副題·ヒント・出典を 23区
+- Modify: `api/tests/test_service.py`, `api/tests/test_app.py`, `web` 카피 관련 테스트
+- Modify: `docs/01-requirements.md` 대상 지역 한 줄, `docs/02-functional-spec.md` 백로그에서 「도쿄 다른 구」체크
+- Test: fixtures는 당분간 시부야 폴리곤 유지 가능. 메시지만 23区로 바꾼 뒤, Task 13에서 경계 파일을 교체
+
+**Interfaces:**
+- Consumes: 기존 `RouteError("outside", ...)`
+- Produces:
+  - `TOKYO_23_WARD_CODES: list[str]` — `"13101"` … `"13123"`
+  - `outside` 메시지: `東京23区内の2点を指定してください`
+  - UI: `subtitle: "東京23区 · 徒歩"`, `s0sub` / `attribution` / `outsideHint` 동일 범위
+
+- [ ] **Step 1: Write the failing test**
+
+```python
+# api/tests/test_wards.py
+from hikage_navi.wards import TOKYO_23_WARD_CODES, OUTSIDE_MESSAGE
+
+def test_twenty_three_ward_codes():
+    assert len(TOKYO_23_WARD_CODES) == 23
+    assert TOKYO_23_WARD_CODES[0] == "13101"
+    assert TOKYO_23_WARD_CODES[-1] == "13123"
+    assert "13113" in TOKYO_23_WARD_CODES  # 渋谷
+
+def test_outside_message_mentions_23ku():
+    assert "東京23区" in OUTSIDE_MESSAGE
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `cd api && . .venv/bin/activate && pytest tests/test_wards.py -v`  
+Expected: FAIL (module missing)
+
+- [ ] **Step 3: Minimal implementation + copy/API 문안 교체**
+
+```python
+# wards.py
+TOKYO_23_WARD_CODES = [f"{c}" for c in range(13101, 13124)]
+OUTSIDE_MESSAGE = "東京23区内の2点を指定してください"
+```
+
+`copy.ts`·`service.py`의 `渋谷区内…`를 `OUTSIDE_MESSAGE` / 동일 일본어로 통일.  
+`MAX_STRAIGHT_M = 3000`은 유지(구가 넓어져도 한 번의 도보 탐색 상한은 그대로).
+
+- [ ] **Step 4: Run tests**
+
+Run: `pytest tests/test_wards.py tests/test_service.py tests/test_app.py -v` 및 `cd web && npm test`  
+Expected: PASS (fixtures 경계는 시부야여도 문안만 바뀌면 됨)
+
+- [ ] **Step 5: Commit**
+
+```bash
+git commit -m "$(cat <<'EOF'
+feat: 서비스 범위를 東京23区 문안으로 넓힌다
+
+EOF
+)"
+```
+
+---
+
+### Task 13: 東京23区 전처리 (구별 PLATEAU + 통합 보행망)
+
+**Files:**
+- Modify: `api/scripts/preprocess.py` — 구 목록 루프, 산출 경로 변경
+- Create: `data/processed/tokyo23/README.md` (생성물 설명, gitignore 대상이면 스크립트 주석으로)
+- Output layout:
+
+```
+data/processed/tokyo23/
+  boundary.geojson          # 23구 union
+  walk-graph.json           # 경계 안 OSM walk 1개
+  wards/
+    13101/buildings.geojson
+    …
+    13123/buildings.geojson
+```
+
+- 시부야 단독 `data/processed/shibuya-*.` 경로는 호환용으로 남기거나, `HIKAGE_DATA_DIR`가 `tokyo23`을 가리키면 새 레이아웃을 쓰도록 `load_ctx`는 Task 14에서 전환
+- Test: 전처리는 통합 테스트 대신 **구 1개(예: 13113) dry-run**으로 건물 ≥ 1, boundary가 Polygon/MultiPolygon인지 스크립트 assert
+
+**Interfaces:**
+- Consumes: `TOKYO_23_WARD_CODES`, 기존 CityGML 파서
+- Produces: 위 디렉터리 레이아웃. 건물 `properties.height`, 경계 교차, `height >= 2`
+
+**데이터 확보:**
+- 구별 CityGML: G공간정보센터 / PLATEAU CMS의 `13101`–`13123` (예: `plateau-13101-chiyoda-ku-2025`). URL은 연도마다 바뀌므로 스크립트에 **코드→다운로드 URL 맵**을 두고, 없는 구는 명확히 fail
+- 경계: `osmnx.geocode_to_gdf`로 구별 Polygon을 받아 unary_union → `boundary.geojson`
+- 보행망: `ox.graph_from_polygon(union_boundary, network_type="walk")` 한 번 (디스크·시간은 크지만 런타임 단순)
+
+- [ ] **Step 1: 구 코드 맵과 출력 경로 스케폴딩**
+
+`preprocess.py`에 `WARDS = TOKYO_23_WARD_CODES`, `OUT = PROCESSED / "tokyo23"`, `ward_dir(code)` 추가.
+
+- [ ] **Step 2: 경계 union**
+
+구별 geocode → list[Polygon] → `unary_union` → `tokyo23/boundary.geojson`.
+
+- [ ] **Step 3: 구별 건물**
+
+각 구 ZIP 다운로드(캐시) → 기존 LOD1 파서 → 해당 구 폴리곤으로 clip → `wards/{code}/buildings.geojson`.
+
+- [ ] **Step 4: walk-graph**
+
+union 경계로 OSM walk → `tokyo23/walk-graph.json`.
+
+- [ ] **Step 5: 스모크**
+
+```bash
+cd api && . .venv/bin/activate
+python scripts/preprocess.py --wards 13113   # 먼저 1구만
+python -c "import json,pathlib; p=pathlib.Path('../data/processed/tokyo23/wards/13113/buildings.geojson'); assert len(json.loads(p.read_text())['features'])>1000"
+```
+
+Expected: 시부야 건물 수가 기존과 같은 자릿수.
+
+- [ ] **Step 6: 23구 전체 실행 (시간 오래 걸림 — 야간 배치 OK)**
+
+```bash
+python scripts/preprocess.py --wards all
+```
+
+- [ ] **Step 7: Commit** (스크립트·문서만; 대용량 geojson은 git에 넣지 않음)
+
+```bash
+git commit -m "$(cat <<'EOF'
+feat: 東京23区용 구별 PLATEAU·OSM 전처리를 추가한다
+
+EOF
+)"
+```
+
+---
+
+### Task 14: 런타임 구 단위 건물 로드 + 수용
+
+**Files:**
+- Modify: `api/src/hikage_navi/app.py` — `load_ctx` / `/boundary` / shadows·routes가 `tokyo23/` 레이아웃 인식
+- Create: `api/src/hikage_navi/building_store.py` — 구별 GeoJSON을 bbox로 고르는 로더
+- Modify: `api/src/hikage_navi/shadows.py` 또는 `service.py` — corridor 건물 선택 시 store 사용
+- Modify: `api/tests/test_building_store.py`, `test_app.py`
+- Modify: `docs/05-acceptance.md` — 범위 문구를 23区·모바일 한 줄 추가
+- Manual: Task 10과 같은 A–E를 **구 경계 넘는 2점**(예: 渋谷→港)과 **모바일 폭**에서 재확인
+
+**Interfaces:**
+- Consumes: `data/processed/tokyo23/**`, 기존 `BuildingIndex`, `plan_routes`
+- Produces:
+  - `BuildingStore.buildings_in_bbox(bbox, margin_m) -> BuildingIndex`
+  - 기동 시 walk-graph + boundary만 로드. 건물은 요청마다(또는 LRU 캐시로 구 파일 단위) 로드
+  - `HIKAGE_DATA_DIR=.../tokyo23` 이면 새 레이아웃, 기존 `shibuya-*` 파일이 있으면 시부야 단일 모드 유지(하위 호환)
+
+- [ ] **Step 1: Write failing test for ward selection**
+
+```python
+def test_store_loads_only_intersecting_wards(tmp_path):
+    # 13113과 13103에 가짜 건물 1개씩 두고
+    # bbox가 13113만 덮으면 features==1
+    ...
+```
+
+- [ ] **Step 2: Implement `BuildingStore`**
+
+구 경계 bbox 인덱스(전처리 시 `wards/{code}/meta.json`에 bounds 저장) → 교차 구만 GeoJSON 읽어 `BuildingIndex` 병합.
+
+- [ ] **Step 3: Wire `app.py`**
+
+`load_ctx`가 `tokyo23/boundary.geojson` + `walk-graph.json` + `BuildingStore(wards_dir)` 반환.  
+`/shadows`·`/routes`는 `buildings_in_bbox` 결과를 기존과 같이 사용.
+
+- [ ] **Step 4: API·웹 테스트 + 수동**
+
+```bash
+export HIKAGE_DATA_DIR=.../data/processed/tokyo23
+uvicorn ...
+# 渋谷区内 단거리 + 渋谷→隣区(3km 이내) + outside(埼玉 등)
+```
+
+모바일 DevTools에서 Task 11 수용 재확인.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git commit -m "$(cat <<'EOF'
+feat: 東京23区 데이터를 구 단위로 로드해 경로·그림자를 계산한다
+
+EOF
+)"
+```
 
 ---
 
 ## Out of this plan
 
-다음 계획은 `docs/07-gcp-cicd.md`를 구현한다. 포함하지 말 것: `Dockerfile.api`, `cloudbuild.yaml`, Vercel 프로젝트, Artifact Registry.
-
-백로그(장소 검색, 가로수, 대중교통)도 이 계획에 넣지 않는다.
+- 배포: `docs/07-gcp-cicd.md` (Docker / Cloud Build / Artifact Registry / Cloud Run / Vercel). Task 14 수용 통과 뒤에만 연다.
+- 백로그(장소 검색, 가로수, 대중교통, 네이티브 스토어)는 넣지 않는다.
 
 ## Spec coverage (self-review)
 
@@ -1925,4 +2196,8 @@ Expected: all passed
 | F7 출처 | 7, 8 |
 | 수용 A–E | 10 |
 | 전처리 | 9 |
-| 배포 GCP/Vercel | 제외 (별도 계획) |
+| 모바일 웹 UI | 11 |
+| 東京23区 문안·범위 | 12 |
+| 東京23区 전처리 | 13 |
+| 東京23区 런타임 로드 | 14 |
+| 배포 GCP/Vercel | 제외 (별도 계획, Task 14 이후) |
