@@ -1661,7 +1661,7 @@ createRoot(document.getElementById("root")!).render(
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 ```bash
 cd web && npm test
@@ -1669,7 +1669,7 @@ cd web && npm test
 
 Expected: 3 passed
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add web/
@@ -1692,7 +1692,7 @@ git commit -m "feat: 웹 상태기계와 일본어 카피를 추가한다"
 - Consumes: `reduce`, `copy`, FastAPI `http://localhost:8000`
 - Produces: 단일 화면. GSI 타일 `https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png`. 초기 center `[139.7016, 35.6580]` zoom 15. pitch/bearing 0. 탭은 click(싱글). `/boundary` 라인, `/shadows` 면, `/routes` 선.
 
-- [ ] **Step 1: Write api client (no placeholder)**
+- [x] **Step 1: Write api client (no placeholder)**
 
 `web/src/api.ts`:
 
@@ -1742,7 +1742,7 @@ export function formatPath(p: PathDto): string {
 }
 ```
 
-- [ ] **Step 2: Implement MapView, TopBar, Panel, App**
+- [x] **Step 2: Implement MapView, TopBar, Panel, App**
 
 `MapView.tsx` 요구:
 
@@ -1763,7 +1763,7 @@ export function formatPath(p: PathDto): string {
 
 경로 계산 중 버튼 disabled, 텍스트 `copy.loadingRoute`.
 
-- [ ] **Step 3: Run API + web locally**
+- [x] **Step 3: Run API + web locally**
 
 터미널 1:
 
@@ -1783,7 +1783,7 @@ Expected: `Local: http://localhost:5173/`
 
 브라우저에서 지도가 보이고, 픽스처 경계 안에서 두 점을 찍고 경로가 나온다.
 
-- [ ] **Step 4: Run automated tests**
+- [x] **Step 4: Run automated tests**
 
 ```bash
 cd api && . .venv/bin/activate && pytest tests/ -v
@@ -1792,7 +1792,7 @@ cd web && npm test && npm run build
 
 Expected: pytest all passed, vitest passed, tsc+vite build success
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add web/src/

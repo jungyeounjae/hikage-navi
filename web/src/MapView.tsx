@@ -1,0 +1,232 @@
+import { useEffect, useRef, type MutableRefObject } from "react";
+import maplibregl from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
+import { copy } from "./copy";
+import type { AppState, Pin } from "./types";
+import { pointInBoundary } from "./geo";
+
+type Props = {
+  state: AppState;
+  boundary: GeoJSON.GeoJSON | null;
+  shadows: GeoJSON.FeatureCollection | null;
+  mapReady: boolean;
+  onMapReady: () => void;
+  onTap: (point: Pin) => void;
+};
+
+const EMPTY: GeoJSON.FeatureCollection = {
+  type: "FeatureCollection",
+  features: [],
+};
+
+function lineFeature(
+  coords: [number, number][],
+): GeoJSON.FeatureCollection {
+  return {
+    type: "FeatureCollection",
+    features: [
+      {
+        type: "Feature",
+        properties: {},
+        geometry: { type: "LineString", coordinates: coords },
+      },
+    ],
+  };
+}
+
+export function MapView({
+  state,
+  boundary,
+  shadows,
+  mapReady,
+  onMapReady,
+  onTap,
+}: Props) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<maplibregl.Map | null>(null);
+  const originMarker = useRef<maplibregl.Marker | null>(null);
+  const destMarker = useRef<maplibregl.Marker | null>(null);
+  const boundaryRef = useRef(boundary);
+  boundaryRef.current = boundary;
+
+  useEffect(() => {
+    if (!containerRef.current || mapRef.current) return;
+
+    const map = new maplibregl.Map({
+      container: containerRef.current,
+      style: {
+        version: 8,
+        sources: {
+          gsi: {
+            type: "raster",
+            tiles: [
+              "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png",
+            ],
+            tileSize: 256,
+            attribution: "国土地理院",
+          },
+        },
+        layers: [{ id: "gsi", type: "raster", source: "gsi" }],
+      },
+      center: [139.7016, 35.658],
+      zoom: 15,
+      pitch: 0,
+      bearing: 0,
+      interactive: true,
+    });
+
+    map.dragRotate.disable();
+    map.touchZoomRotate.disableRotation();
+
+    map.on("load", () => {
+      map.addSource("boundary", {
+        type: "geojson",
+        data: EMPTY,
+      });
+      map.addLayer({
+        id: "boundary-line",
+        type: "line",
+        source: "boundary",
+        paint: { "line-color": "#334155", "line-width": 2 },
+      });
+
+      map.addSource("shadows", {
+        type: "geojson",
+        data: EMPTY,
+      });
+      map.addLayer({
+        id: "shadows-fill",
+        type: "fill",
+        source: "shadows",
+        paint: { "fill-color": "#0f172a", "fill-opacity": 0.35 },
+      });
+
+      map.addSource("shortest", {
+        type: "geojson",
+        data: EMPTY,
+      });
+      map.addLayer({
+        id: "shortest-line",
+        type: "line",
+        source: "shortest",
+        paint: { "line-color": "#1d4ed8", "line-width": 4 },
+      });
+
+      map.addSource("shadiest", {
+        type: "geojson",
+        data: EMPTY,
+      });
+      map.addLayer({
+        id: "shadiest-line",
+        type: "line",
+        source: "shadiest",
+        paint: { "line-color": "#b45309", "line-width": 5 },
+      });
+
+      onMapReady();
+    });
+
+    map.on("click", (e) => {
+      const lon = e.lngLat.lng;
+      const lat = e.lngLat.lat;
+      const inBoundary = pointInBoundary(lon, lat, boundaryRef.current);
+      onTap({ lon, lat, inBoundary });
+    });
+
+    mapRef.current = map;
+    return () => {
+      originMarker.current?.remove();
+      destMarker.current?.remove();
+      map.remove();
+      mapRef.current = null;
+    };
+  }, [onMapReady, onTap]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !map.isStyleLoaded() || !boundary) return;
+    const src = map.getSource("boundary") as maplibregl.GeoJSONSource | undefined;
+    src?.setData(boundary as GeoJSON.Feature | GeoJSON.FeatureCollection);
+  }, [boundary, mapReady]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !map.isStyleLoaded()) return;
+    const src = map.getSource("shadows") as maplibregl.GeoJSONSource | undefined;
+    src?.setData(shadows ?? EMPTY);
+  }, [shadows, mapReady]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !map.isStyleLoaded()) return;
+    const shortestSrc = map.getSource(
+      "shortest",
+    ) as maplibregl.GeoJSONSource | undefined;
+    const shadiestSrc = map.getSource(
+      "shadiest",
+    ) as maplibregl.GeoJSONSource | undefined;
+    const route = state.route;
+    if (!route) {
+      shortestSrc?.setData(EMPTY);
+      shadiestSrc?.setData(EMPTY);
+      return;
+    }
+    if (route.same_route || !route.shadiest) {
+      shortestSrc?.setData(lineFeature(route.shortest.coordinates));
+      shadiestSrc?.setData(EMPTY);
+    } else {
+      shortestSrc?.setData(lineFeature(route.shortest.coordinates));
+      shadiestSrc?.setData(lineFeature(route.shadiest.coordinates));
+    }
+  }, [state.route, mapReady]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    function setMarker(
+      ref: MutableRefObject<maplibregl.Marker | null>,
+      pin: Pin | null,
+      label: string,
+    ) {
+      if (!pin) {
+        ref.current?.remove();
+        ref.current = null;
+        return;
+      }
+      const el = document.createElement("div");
+      el.className = pin.inBoundary ? "pin" : "pin pin-out";
+      el.textContent = label;
+      if (!ref.current) {
+        ref.current = new maplibregl.Marker({ element: el })
+          .setLngLat([pin.lon, pin.lat])
+          .addTo(map!);
+      } else {
+        ref.current.setLngLat([pin.lon, pin.lat]);
+        const node = ref.current.getElement();
+        node.className = pin.inBoundary ? "pin" : "pin pin-out";
+        node.textContent = label;
+      }
+    }
+
+    setMarker(originMarker, state.origin, "出発");
+    setMarker(destMarker, state.destination, "到着");
+  }, [state.origin, state.destination]);
+
+  return (
+    <div className="map-wrap">
+      {!mapReady && <div className="map-loading">{copy.loadingMap}</div>}
+      <div ref={containerRef} className="map" />
+      <div className="legend">
+        <span>
+          <i className="swatch short" />
+          {copy.legendShortest}
+        </span>
+        <span>
+          <i className="swatch shade" />
+          {copy.legendShade}
+        </span>
+      </div>
+    </div>
+  );
+}
