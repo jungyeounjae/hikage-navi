@@ -1,0 +1,60 @@
+# Cloud Build → Artifact Registry → Cloud Run (asia-northeast1)
+# Usage (from repo root, after billing + APIs enabled):
+#   gcloud builds submit --config=cloudbuild.yaml .
+#
+# Substitutions:
+#   _REGION=asia-northeast1
+#   _SERVICE=hikage-navi-api
+#   _REPO=hikage-navi
+
+substitutions:
+  _REGION: asia-northeast1
+  _SERVICE: hikage-navi-api
+  _REPO: hikage-navi
+# Local submit: --substitutions=SHORT_SHA=$(git rev-parse --short HEAD)
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -f
+      - Dockerfile.api
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/api:$SHORT_SHA
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/api:latest
+      - .
+
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/api:$SHORT_SHA
+
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/api:latest
+
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - ${_SERVICE}
+      - --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/api:$SHORT_SHA
+      - --region=${_REGION}
+      - --platform=managed
+      - --allow-unauthenticated
+      - --memory=1Gi
+      - --cpu=1
+      - --min-instances=0
+      - --max-instances=3
+      - --port=8080
+      - --set-env-vars=HIKAGE_DATA_DIR=/app/data/processed
+
+images:
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/api:$SHORT_SHA
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/api:latest

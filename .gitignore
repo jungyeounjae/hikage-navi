@@ -13,9 +13,12 @@ node_modules/
 dist/
 .vite/
 
-# App data (원본·전처리 산출물은 로컬에만)
+# App data — 원본은 로컬만. 시부야 전처리 산출물은 Cloud Build 이미지용으로 추적
 data/raw/
-data/processed/
+data/processed/*
+!data/processed/shibuya-boundary.geojson
+!data/processed/shibuya-buildings.geojson
+!data/processed/shibuya-walk-graph.json
 *.osm.pbf
 *.gml
 *.citygml
