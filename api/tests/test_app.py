@@ -24,6 +24,23 @@ def test_health(client):
     assert res.json() == {"ok": True}
 
 
+def test_routes_include_max_continuous_sun_fields(client):
+    res = client.post(
+        "/routes",
+        json={
+            "origin": {"lon": 139.70050, "lat": 35.65900},
+            "destination": {"lon": 139.70270, "lat": 35.65700},
+            "datetime": "2026-08-14T12:00:00+09:00",
+        },
+    )
+    assert res.status_code == 200
+    body = res.json()["shortest"]
+    assert "max_continuous_sun_m" in body
+    assert "max_continuous_sun_seconds" in body
+    assert isinstance(body["max_continuous_sun_m"], int)
+    assert isinstance(body["max_continuous_sun_seconds"], int)
+
+
 def test_routes_outside_400(client):
     res = client.post(
         "/routes",

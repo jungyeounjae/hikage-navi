@@ -64,6 +64,8 @@ def _path_dto(p) -> PathDto:
         shade_m=p.shade_m,
         sun_m=p.sun_m,
         shade_pct=p.shade_pct,
+        max_continuous_sun_m=p.max_continuous_sun_m,
+        max_continuous_sun_seconds=p.max_continuous_sun_seconds,
     )
 
 

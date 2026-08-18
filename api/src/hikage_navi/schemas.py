@@ -21,6 +21,8 @@ class PathDto(BaseModel):
     shade_m: int
     sun_m: int
     shade_pct: int
+    max_continuous_sun_m: int
+    max_continuous_sun_seconds: int
 
 
 class RouteResponse(BaseModel):

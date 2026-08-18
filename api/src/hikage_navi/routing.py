@@ -7,6 +7,7 @@ import networkx as nx
 from shapely.geometry.base import BaseGeometry
 
 from hikage_navi.constants import ALPHA_SHADE, WALK_M_PER_MIN
+from hikage_navi.exposure import sun_seconds
 from hikage_navi.graph import Edge, WalkGraph
 from hikage_navi.shadows import ShadowIndex
 
@@ -24,6 +25,8 @@ class PathResult:
     shade_m: int
     sun_m: int
     shade_pct: int
+    max_continuous_sun_m: int
+    max_continuous_sun_seconds: int
 
 
 Shadows = BaseGeometry | ShadowIndex | None
@@ -57,7 +60,12 @@ def edge_shade_split(edge: Edge, shadows: Shadows) -> tuple[float, float]:
     return _split(edge, _shade_map([edge], _as_index(shadows)))
 
 
-def _metrics(graph: WalkGraph, node_ids: list[int], shade_map: dict[Pair, float]) -> PathResult:
+def _metrics(
+    graph: WalkGraph,
+    node_ids: list[int],
+    shade_map: dict[Pair, float],
+    index: ShadowIndex | None,
+) -> PathResult:
     by_pair = {frozenset((e.u, e.v)): e for e in graph.edges}
     coords: list[tuple[float, float]] = []
     dist = 0.0
@@ -79,6 +87,8 @@ def _metrics(graph: WalkGraph, node_ids: list[int], shade_map: dict[Pair, float]
     else:
         duration_min = math.ceil(distance_m / WALK_M_PER_MIN)
         shade_pct = int(round(100 * shade / dist))
+    max_m = 0.0 if index is None else index.max_continuous_sun_m(coords)
+    max_continuous_sun_m = int(round(max_m))
     return PathResult(
         node_ids=node_ids,
         coords=coords,
@@ -87,6 +97,8 @@ def _metrics(graph: WalkGraph, node_ids: list[int], shade_map: dict[Pair, float]
         shade_m=int(round(shade)),
         sun_m=int(round(sun)),
         shade_pct=shade_pct,
+        max_continuous_sun_m=max_continuous_sun_m,
+        max_continuous_sun_seconds=sun_seconds(max_continuous_sun_m),
     )
 
 
@@ -105,13 +117,14 @@ def _path(
     dst: int,
     weight_fn,
     shade_map: dict[Pair, float],
+    index: ShadowIndex | None,
 ) -> PathResult:
     G = _nx_graph(graph, weight_fn)
     try:
         nodes = nx.shortest_path(G, src, dst, weight="weight")
     except (nx.NetworkXNoPath, nx.NodeNotFound) as exc:
         raise DisconnectedError() from exc
-    return _metrics(graph, nodes, shade_map)
+    return _metrics(graph, nodes, shade_map, index)
 
 
 def path_metrics(graph: WalkGraph, node_ids: list[int], shadows: Shadows) -> PathResult:
@@ -119,7 +132,7 @@ def path_metrics(graph: WalkGraph, node_ids: list[int], shadows: Shadows) -> Pat
     index = _as_index(shadows)
     on_path = {frozenset(pair) for pair in zip(node_ids, node_ids[1:])}
     edges = [e for e in graph.edges if frozenset((e.u, e.v)) in on_path]
-    return _metrics(graph, node_ids, _shade_map(edges, index))
+    return _metrics(graph, node_ids, _shade_map(edges, index), index)
 
 
 def shortest_path(
@@ -128,17 +141,18 @@ def shortest_path(
     dst: int,
     shadows: Shadows = None,
 ) -> PathResult:
-    result = _path(graph, src, dst, lambda e: e.length_m, {})
+    result = _path(graph, src, dst, lambda e: e.length_m, {}, None)
     if shadows is None:
         return result
     return path_metrics(graph, result.node_ids, shadows)
 
 
 def shadiest_path(graph: WalkGraph, src: int, dst: int, shadows: Shadows) -> PathResult:
-    shade_map = _shade_map(graph.edges, _as_index(shadows))
+    index = _as_index(shadows)
+    shade_map = _shade_map(graph.edges, index)
 
     def w(e: Edge) -> float:
         d_shade, d_sun = _split(e, shade_map)
         return d_shade + ALPHA_SHADE * d_sun
 
-    return _path(graph, src, dst, w, shade_map)
+    return _path(graph, src, dst, w, shade_map, index)
