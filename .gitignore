@@ -19,6 +19,7 @@ data/processed/*
 !data/processed/shibuya-boundary.geojson
 !data/processed/shibuya-buildings.geojson
 !data/processed/shibuya-walk-graph.json
+!data/processed/shibuya-water-spots.geojson
 *.osm.pbf
 *.gml
 *.citygml

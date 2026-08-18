@@ -1,10 +1,29 @@
 from pathlib import Path
 
 from hikage_navi.constants import WATER_BUFFER_M
-from hikage_navi.water import load_water_spots, nearby_water_spots
+from hikage_navi.water import load_water_spots, nearby_water_spots, spot_from_properties
 
 FIXTURE_DIR = Path(__file__).resolve().parents[2] / "data/fixtures"
 ROUTE = [(139.70050, 35.65900), (139.70160, 35.65800), (139.70270, 35.65700)]
+
+
+def test_maps_osm_tags_without_inventing_name():
+    spot = spot_from_properties(
+        {
+            "id": "n1",
+            "name": None,
+            "amenity": "drinking_water",
+            "bottle": "yes",
+            "access": "yes",
+            "opening_hours": "09:00-18:00",
+        },
+        lon=139.7,
+        lat=35.65,
+    )
+    assert spot.name is None
+    assert spot.bottle_refill is True
+    assert spot.source == "OSM"
+    assert spot.type == "DRINKING_WATER"
 
 
 def test_buffer_constant_is_50():

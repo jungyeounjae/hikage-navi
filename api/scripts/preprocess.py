@@ -9,6 +9,7 @@
   HIKAGE_ROOT — 저장소 루트 (기본: 이 파일 기준 ../../)
   HIKAGE_USE_PBF=1 — Geofabrik kanto PBF + pyrosm (선택)
   HIKAGE_CITYGML_URL — PLATEAU CityGML zip URL
+  HIKAGE_WATER_ONLY=1 — 기존 경계만 읽고 OSM 급수 스팟만 추출
 
 공개 OSRM/Nominatim 경로 서버는 쓰지 않는다.
 경계 geocode 1회, 보행망은 Overpass(폴리곤) 또는 로컬 PBF.
@@ -35,6 +36,8 @@ CITYGML_URL = os.environ.get(
 )
 CITYGML_ZIP = RAW / "13113_shibuya-ku_pref_2025_citygml_1_op.zip"
 USE_PBF = os.environ.get("HIKAGE_USE_PBF", "").strip() in {"1", "true", "yes"}
+WATER_ONLY = os.environ.get("HIKAGE_WATER_ONLY", "").strip() in {"1", "true", "yes"}
+WATER_TAGS = {"amenity": "drinking_water", "drinking_water": "yes"}
 
 NS = {
     "gml": "http://www.opengis.net/gml/3.2",
@@ -72,7 +75,7 @@ def build_boundary():
     import geopandas as gpd
     import osmnx as ox
 
-    print("1/4 시부야 경계 (Nominatim geocode 1회)…")
+    print("1/5 시부야 경계 (Nominatim geocode 1회)…")
     ox.settings.use_cache = True
     ox.settings.cache_folder = str(RAW / "osmnx_cache")
     gdf = ox.geocode_to_gdf("Shibuya, Tokyo, Japan")
@@ -209,7 +212,7 @@ def build_buildings(boundary_geom) -> None:
     from shapely.geometry import Polygon, mapping
     from shapely.prepared import prep
 
-    print("2/4 PLATEAU 건물 (CityGML zip)…")
+    print("2/5 PLATEAU 건물 (CityGML zip)…")
     _download(CITYGML_URL, CITYGML_ZIP)
     extract_dir = RAW / "citygml_shibuya"
     if not extract_dir.exists():
@@ -297,7 +300,7 @@ def _graph_to_walk_json(G, out: Path) -> None:
 def build_walk_graph(boundary_geom) -> None:
     import osmnx as ox
 
-    print("3/4 보행 그래프…")
+    print("3/5 보행 그래프…")
     ox.settings.use_cache = True
     ox.settings.cache_folder = str(RAW / "osmnx_cache")
     out = PROCESSED / "shibuya-walk-graph.json"
@@ -324,12 +327,142 @@ def build_walk_graph(boundary_geom) -> None:
     _graph_to_walk_json(G, out)
 
 
+def _series_value(row, key: str):
+    import pandas as pd
+
+    if key not in row.index:
+        return None
+    val = row[key]
+    if val is None or pd.isna(val):
+        return None
+    return val
+
+
+def _osm_id_from_row(idx, row) -> str:
+    osmid = _series_value(row, "osmid")
+    if osmid is not None:
+        return str(osmid)
+    if isinstance(idx, tuple) and len(idx) >= 2:
+        etype, oid = idx[0], idx[1]
+        prefix = {"node": "n", "way": "w", "relation": "r"}.get(str(etype), "")
+        return f"{prefix}{oid}"
+    return str(idx)
+
+
+def _point_features_from_gdf(gdf, boundary_geom) -> list[dict]:
+    from shapely.geometry import mapping
+
+    from hikage_navi.water import spot_from_properties, water_spot_feature_properties
+
+    features: list[dict] = []
+    if gdf is None or getattr(gdf, "empty", True):
+        return features
+    for idx, row in gdf.iterrows():
+        geom = row.geometry
+        if geom is None or geom.geom_type != "Point":
+            continue
+        if not geom.intersects(boundary_geom):
+            continue
+        lon, lat = float(geom.x), float(geom.y)
+        amenity = _series_value(row, "amenity")
+        drinking_water = _series_value(row, "drinking_water")
+        if amenity != "drinking_water" and str(drinking_water) != "yes":
+            continue
+        bottle = _series_value(row, "bottle")
+        props = {
+            "id": _osm_id_from_row(idx, row),
+            "name": _series_value(row, "name"),
+            "amenity": amenity,
+            "drinking_water": drinking_water,
+            "bottle": bottle,
+            "access": _series_value(row, "access"),
+            "opening_hours": _series_value(row, "opening_hours"),
+        }
+        spot = spot_from_properties(props, lon=lon, lat=lat)
+        features.append(
+            {
+                "type": "Feature",
+                "properties": water_spot_feature_properties(spot, bottle=bottle),
+                "geometry": mapping(geom),
+            }
+        )
+    return features
+
+
+def load_boundary_geom():
+    from shapely.geometry import shape
+
+    path = PROCESSED / "shibuya-boundary.geojson"
+    if not path.is_file():
+        raise SystemExit(
+            f"HIKAGE_WATER_ONLY=1 인데 경계 파일이 없습니다: {path}\n"
+            "먼저 전체 전처리를 실행하거나 경계를 생성하세요."
+        )
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    if raw.get("type") == "FeatureCollection":
+        geom = shape(raw["features"][0]["geometry"])
+    else:
+        geom = shape(raw["geometry"])
+    if geom.geom_type == "MultiPolygon":
+        geom = max(geom.geoms, key=lambda g: g.area)
+    return geom
+
+
+def build_water_spots(boundary_geom) -> None:
+    import osmnx as ox
+
+    print("4/5 OSM 급수 스팟 (Point만)…")
+    ox.settings.use_cache = True
+    ox.settings.cache_folder = str(RAW / "osmnx_cache")
+    out = PROCESSED / "shibuya-water-spots.geojson"
+
+    try:
+        if USE_PBF:
+            try:
+                from pyrosm import OSM
+            except ImportError as exc:
+                raise SystemExit(
+                    "HIKAGE_USE_PBF=1 이면 pyrosm이 필요합니다: pip install pyrosm"
+                ) from exc
+            _download(PBF_URL, PBF_PATH)
+            minx, miny, maxx, maxy = boundary_geom.bounds
+            print("  pyrosm POI 필터로 급수 추출…")
+            osm = OSM(str(PBF_PATH), bounding_box=[minx, miny, maxx, maxy])
+            gdf = osm.get_pois(
+                custom_filter={
+                    "amenity": ["drinking_water"],
+                    "drinking_water": ["yes"],
+                }
+            )
+        else:
+            print("  osmnx.features_from_polygon (Overpass)…")
+            gdf = ox.features_from_polygon(boundary_geom, tags=WATER_TAGS)
+        features = _point_features_from_gdf(gdf, boundary_geom)
+    except SystemExit:
+        raise
+    except Exception as exc:
+        print(f"  급수 추출 실패 (산출물 생략): {exc}", file=sys.stderr)
+        return
+
+    out.write_text(
+        json.dumps({"type": "FeatureCollection", "features": features}, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    print(f"  → {out} ({len(features)} points)")
+
+
 def main() -> None:
     ensure_dirs()
+    if WATER_ONLY:
+        boundary = load_boundary_geom()
+        build_water_spots(boundary)
+        print("완료 (water only):", PROCESSED)
+        return
     boundary = build_boundary()
     build_buildings(boundary)
     build_walk_graph(boundary)
-    print("4/4 완료:", PROCESSED)
+    build_water_spots(boundary)
+    print("5/5 완료:", PROCESSED)
 
 
 if __name__ == "__main__":
