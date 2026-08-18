@@ -19,6 +19,7 @@ python scripts/preprocess.py
 | `shibuya-boundary.geojson` | 시부야구 Polygon |
 | `shibuya-buildings.geojson` | PLATEAU LOD1, `properties.height` ≥ 2 |
 | `shibuya-walk-graph.json` | OSM 보행 노드·엣지 |
+| `shibuya-water-spots.geojson` | OSM 급수 (`amenity=drinking_water` 등) |
 
 원본·캐시: `data/raw/` (CityGML zip, osmnx 캐시 등)
 
@@ -28,6 +29,7 @@ python scripts/preprocess.py
 2. **건물** — PLATEAU 渋谷区 CityGML zip 다운로드 후 LOD 밑면·`measuredHeight` 파싱
 3. **보행망** — 기본은 시부야 폴리곤 Overpass → `osmnx.graph_from_polygon(..., network_type="walk")`  
    공개 OSRM/Nominatim **경로** API는 쓰지 않는다.
+4. **급수** — 같은 OSM에서 `amenity=drinking_water` 등을 뽑아 GeoJSON으로 저장. 런타임 Overpass는 쓰지 않는다.
 
 ## 환경변수
 
