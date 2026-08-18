@@ -4,6 +4,7 @@ export const copy = {
   nightBadge: "夜間",
   legendShortest: "最短",
   legendShade: "日陰",
+  waterToggle: "給水スポット",
   s0: "地図をタップして出発地点を選んでください",
   s0sub: "対象は渋谷区内の徒歩ルートです",
   s1: "出発が決まりました。次に到着地点をタップしてください",

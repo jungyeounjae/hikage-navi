@@ -47,6 +47,7 @@ export type AppState = {
   route: RouteResponse | null;
   errorMessage: string | null;
   selected: "shortest" | "shadiest";
+  waterVisible: boolean;
 };
 
 export type Action =
@@ -58,4 +59,5 @@ export type Action =
   | { type: "ROUTE_ERR"; message: string }
   | { type: "CLEAR_ERROR" }
   | { type: "SELECT"; which: "shortest" | "shadiest" }
-  | { type: "SET_ORIGIN"; point: Pin };
+  | { type: "SET_ORIGIN"; point: Pin }
+  | { type: "TOGGLE_WATER" };

@@ -1,5 +1,5 @@
 import { copy } from "./copy";
-import type { Bbox, PathDto, Pin, RouteResponse } from "./types";
+import type { Bbox, PathDto, Pin, RouteResponse, WaterSpotDto } from "./types";
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 
@@ -62,4 +62,16 @@ export function formatContinuousSun(p: PathDto): string {
   const label =
     min === 0 ? `${sec}秒` : sec === 0 ? `${min}分` : `${min}分${sec}秒`;
   return copy.continuousSun(label);
+}
+
+export function waterPopupLines(spot: WaterSpotDto): string[] {
+  const lines: string[] = [];
+  if (spot.name) lines.push(spot.name);
+  else lines.push("給水スポット");
+  lines.push("💧 給水可能");
+  lines.push(`ルートから約${spot.route_distance_m}m`);
+  if (spot.bottle_refill) lines.push("マイボトル給水可能");
+  if (spot.access) lines.push(spot.access);
+  if (spot.opening_hours) lines.push(`利用時間 ${spot.opening_hours}`);
+  return lines;
 }

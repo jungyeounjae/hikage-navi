@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { formatContinuousSun, formatPath, localInputToIso, shadowsQuery } from "./api";
+import {
+  formatContinuousSun,
+  formatPath,
+  localInputToIso,
+  shadowsQuery,
+  waterPopupLines,
+} from "./api";
 import type { PathDto } from "./types";
 
 function samplePath(over: Partial<PathDto> = {}): PathDto {
@@ -57,5 +63,50 @@ describe("api helpers", () => {
     expect(new URLSearchParams(q).get("bbox")).toBe(
       "139.6951,35.6531,139.7123,35.6646",
     );
+  });
+
+  it("waterPopupLines omits missing optional fields", () => {
+    const lines = waterPopupLines({
+      id: "osm-near",
+      name: null,
+      lat: 35.658,
+      lon: 139.7016,
+      type: "DRINKING_WATER",
+      source: "OSM",
+      bottle_refill: null,
+      access: null,
+      opening_hours: null,
+      route_distance_m: 28,
+    });
+    expect(lines).toEqual([
+      "給水スポット",
+      "💧 給水可能",
+      "ルートから約28m",
+    ]);
+    expect(lines.join("\n")).not.toContain("利用時間");
+    expect(lines.join("\n")).not.toContain("マイボトル");
+  });
+
+  it("waterPopupLines includes optional fields when present", () => {
+    const lines = waterPopupLines({
+      id: "osm-named",
+      name: "代々木公園",
+      lat: 35.671,
+      lon: 139.695,
+      type: "DRINKING_WATER",
+      source: "OSM",
+      bottle_refill: true,
+      access: "yes",
+      opening_hours: "9:00〜18:00",
+      route_distance_m: 30,
+    });
+    expect(lines).toEqual([
+      "代々木公園",
+      "💧 給水可能",
+      "ルートから約30m",
+      "マイボトル給水可能",
+      "yes",
+      "利用時間 9:00〜18:00",
+    ]);
   });
 });

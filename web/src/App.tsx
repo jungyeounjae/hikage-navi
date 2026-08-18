@@ -109,6 +109,7 @@ export function App() {
         onMapReady={onMapReady}
         onTap={onTap}
         onViewportChange={onViewportChange}
+        onToggleWater={() => dispatch({ type: "TOGGLE_WATER" })}
       />
       <Panel
         state={state}

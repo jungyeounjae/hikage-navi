@@ -93,6 +93,7 @@ body,
   top: 0.75rem;
   right: 0.75rem;
   display: flex;
+  align-items: center;
   gap: 0.75rem;
   background: var(--panel);
   padding: 0.4rem 0.6rem;
@@ -131,6 +132,28 @@ body,
 
 .pin-out {
   background: #94a3b8;
+}
+
+.water-pin {
+  display: inline-block;
+  width: max-content;
+  background: #0369a1;
+  color: #fff;
+  padding: 0.25rem 0.45rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 2px;
+  white-space: nowrap;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.legend-water {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-height: 44px;
+  cursor: pointer;
 }
 
 .panel {

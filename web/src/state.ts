@@ -15,6 +15,7 @@ export function initialState(): AppState {
     route: null,
     errorMessage: null,
     selected: "shadiest",
+    waterVisible: true,
   };
 }
 
@@ -96,6 +97,8 @@ export function reduce(state: AppState, action: Action): AppState {
       };
     case "SELECT":
       return { ...state, selected: action.which };
+    case "TOGGLE_WATER":
+      return { ...state, waterVisible: !state.waterVisible };
     default:
       return state;
   }
