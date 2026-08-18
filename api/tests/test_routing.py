@@ -36,6 +36,23 @@ def test_shortest_1_to_3():
     assert result.shade_pct == 0
 
 
+def test_shortest_without_shadows_has_zero_continuous_sun():
+    g = load_walk_graph(FIXTURE)
+    result = shortest_path(g, 1, 3)
+    assert result.max_continuous_sun_m == 0
+    assert result.max_continuous_sun_seconds == 0
+
+
+def test_shortest_with_shadows_reports_continuous_sun():
+    g = load_walk_graph(FIXTURE)
+    shadow = box(139.7010, 35.6575, 139.7030, 35.6590)
+    result = shortest_path(g, 1, 3, shadows=shadow)
+    assert result.max_continuous_sun_m >= 0
+    assert result.max_continuous_sun_seconds == int(
+        round(result.max_continuous_sun_m / 80.0 * 60)
+    )
+
+
 def test_shortest_reports_shade_when_shadows_given():
     g = load_walk_graph(FIXTURE)
     # 픽스처 노드 1–2–3 주변을 덮는 그림자 → 최단도 그늘%를 채운다

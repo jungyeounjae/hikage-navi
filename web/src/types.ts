@@ -5,6 +5,19 @@ export type Pin = { lon: number; lat: number; inBoundary: boolean };
 /** minLon, minLat, maxLon, maxLat */
 export type Bbox = [number, number, number, number];
 
+export type WaterSpotDto = {
+  id: string;
+  name: string | null;
+  lat: number;
+  lon: number;
+  type: string;
+  source: string;
+  bottle_refill: boolean | null;
+  access: string | null;
+  opening_hours: string | null;
+  route_distance_m: number;
+};
+
 export type PathDto = {
   coordinates: [number, number][];
   distance_m: number;
@@ -12,6 +25,9 @@ export type PathDto = {
   shade_m: number;
   sun_m: number;
   shade_pct: number;
+  max_continuous_sun_m: number;
+  max_continuous_sun_seconds: number;
+  water_spots: WaterSpotDto[];
 };
 
 export type RouteResponse = {
@@ -31,6 +47,7 @@ export type AppState = {
   route: RouteResponse | null;
   errorMessage: string | null;
   selected: "shortest" | "shadiest";
+  waterVisible: boolean;
 };
 
 export type Action =
@@ -42,4 +59,5 @@ export type Action =
   | { type: "ROUTE_ERR"; message: string }
   | { type: "CLEAR_ERROR" }
   | { type: "SELECT"; which: "shortest" | "shadiest" }
-  | { type: "SET_ORIGIN"; point: Pin };
+  | { type: "SET_ORIGIN"; point: Pin }
+  | { type: "TOGGLE_WATER" };

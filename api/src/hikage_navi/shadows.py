@@ -11,6 +11,7 @@ from shapely.geometry.base import BaseGeometry
 from shapely.ops import transform, unary_union
 
 from hikage_navi.constants import MIN_SUN_ALTITUDE_DEG
+from hikage_navi.exposure import max_run_sun_m
 from hikage_navi.geo import expand_bbox, from_planar, to_planar, to_planar_array
 from hikage_navi.sun import shadow_length_m
 
@@ -174,17 +175,26 @@ class ShadowIndex:
     def shade_length_m(self, coords_lonlat: Sequence[tuple[float, float]]) -> float:
         return float(self.shade_lengths([coords_lonlat])[0])
 
-    def shade_lengths(self, coords_list: Sequence[Sequence[tuple[float, float]]]):
-        """여러 선의 그늘 길이를 한 번에 구한다.
+    def sample_shade(
+        self, coords: Sequence[tuple[float, float]]
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """한 선의 샘플 구간 길이와 그늘 여부. 트리가 비면 전부 SUN(False)."""
+        usable, owner, step, shaded = self._sample_shade_batch([coords])
+        if not usable:
+            return np.array([], dtype=float), np.array([], dtype=bool)
+        return step, shaded
 
-        선×그림자 교차를 정확히 계산하면 저녁처럼 그림자가 긴 시간대에
-        교차쌍이 수십만 개로 불어나 응답이 10초를 넘는다. SAMPLE_STEP_M 간격
-        샘플점의 포함 여부로 근사한다 (간선당 오차 ≤ 샘플 간격).
-        """
-        out = np.zeros(len(coords_list))
+    def max_continuous_sun_m(self, coords: Sequence[tuple[float, float]]) -> float:
+        steps, shaded = self.sample_shade(coords)
+        return max_run_sun_m(shaded, steps)
+
+    def _sample_shade_batch(
+        self, coords_list: Sequence[Sequence[tuple[float, float]]]
+    ) -> tuple[list[int], np.ndarray, np.ndarray, np.ndarray]:
         usable = [i for i, c in enumerate(coords_list) if len(c) >= 2]
-        if self._tree is None or not usable:
-            return out
+        if not usable:
+            empty = np.array([], dtype=float)
+            return usable, empty.astype(int), empty, np.array([], dtype=bool)
 
         counts = np.array([len(coords_list[i]) for i in usable])
         xy = to_planar_array(
@@ -201,11 +211,26 @@ class ShadowIndex:
         rank = np.arange(len(owner)) - np.repeat(np.cumsum(samples) - samples, samples)
         points = shapely.line_interpolate_point(lines[owner], (rank + 0.5) * step)
 
-        hit, _ = self._tree.query(points, predicate="intersects")
-        if hit.size == 0:
-            return out
         shaded = np.zeros(len(points), dtype=bool)
-        shaded[hit] = True
+        if self._tree is not None:
+            hit, _ = self._tree.query(points, predicate="intersects")
+            if hit.size:
+                shaded[hit] = True
+        return usable, owner, step, shaded
+
+    def shade_lengths(self, coords_list: Sequence[Sequence[tuple[float, float]]]):
+        """여러 선의 그늘 길이를 한 번에 구한다.
+
+        선×그림자 교차를 정확히 계산하면 저녁처럼 그림자가 긴 시간대에
+        교차쌍이 수십만 개로 불어나 응답이 10초를 넘는다. SAMPLE_STEP_M 간격
+        샘플점의 포함 여부로 근사한다 (간선당 오차 ≤ 샘플 간격).
+        """
+        out = np.zeros(len(coords_list))
+        if self._tree is None:
+            return out
+        usable, owner, step, shaded = self._sample_shade_batch(coords_list)
+        if not usable:
+            return out
         out[usable] = np.bincount(
             owner[shaded], weights=step[shaded], minlength=len(usable)
         )

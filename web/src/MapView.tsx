@@ -4,6 +4,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { copy } from "./copy";
 import type { AppState, Bbox, Pin } from "./types";
 import { pointInBoundary } from "./geo";
+import { waterPopupHtml } from "./api";
 
 type Props = {
   state: AppState;
@@ -13,6 +14,7 @@ type Props = {
   onMapReady: () => void;
   onTap: (point: Pin) => void;
   onViewportChange: (bbox: Bbox) => void;
+  onToggleWater: () => void;
 };
 
 const EMPTY: GeoJSON.FeatureCollection = {
@@ -43,11 +45,13 @@ export function MapView({
   onMapReady,
   onTap,
   onViewportChange,
+  onToggleWater,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const originMarker = useRef<maplibregl.Marker | null>(null);
   const destMarker = useRef<maplibregl.Marker | null>(null);
+  const waterMarkers = useRef<maplibregl.Marker[]>([]);
   const boundaryRef = useRef(boundary);
   boundaryRef.current = boundary;
 
@@ -152,6 +156,8 @@ export function MapView({
     return () => {
       originMarker.current?.remove();
       destMarker.current?.remove();
+      for (const marker of waterMarkers.current) marker.remove();
+      waterMarkers.current = [];
       map.remove();
       mapRef.current = null;
     };
@@ -230,6 +236,35 @@ export function MapView({
     setMarker(destMarker, state.destination, "到着");
   }, [state.origin, state.destination]);
 
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    for (const marker of waterMarkers.current) marker.remove();
+    waterMarkers.current = [];
+
+    const path =
+      state.selected === "shadiest" && state.route?.shadiest
+        ? state.route.shadiest
+        : state.route?.shortest;
+    const spots = state.waterVisible && path ? path.water_spots : [];
+
+    for (const spot of spots) {
+      const root = document.createElement("div");
+      const labelEl = document.createElement("div");
+      labelEl.className = "water-pin";
+      labelEl.textContent = "💧";
+      root.appendChild(labelEl);
+      const marker = new maplibregl.Marker({ element: root })
+        .setLngLat([spot.lon, spot.lat])
+        .setPopup(
+          new maplibregl.Popup({ offset: 12 }).setHTML(waterPopupHtml(spot)),
+        )
+        .addTo(map);
+      waterMarkers.current.push(marker);
+    }
+  }, [state.route, state.selected, state.waterVisible, mapReady]);
+
   return (
     <div className="map-wrap">
       {!mapReady && <div className="map-loading">{copy.loadingMap}</div>}
@@ -243,6 +278,14 @@ export function MapView({
           <i className="swatch shade" />
           {copy.legendShade}
         </span>
+        <label className="legend-water">
+          <input
+            type="checkbox"
+            checked={state.waterVisible}
+            onChange={onToggleWater}
+          />
+          💧 {copy.waterToggle}
+        </label>
       </div>
     </div>
   );
