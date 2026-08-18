@@ -1,6 +1,6 @@
 import type { Dispatch } from "react";
 import { copy } from "./copy";
-import { formatPath } from "./api";
+import { formatContinuousSun, formatPath } from "./api";
 import type { Action, AppState, Pin } from "./types";
 import { pointInBoundary } from "./geo";
 
@@ -94,7 +94,10 @@ export function Panel({
       {phase === "S3" && route && (
         <div>
           {route.same_route ? (
-            <p>{copy.sameRoute}</p>
+            <>
+              <p>{copy.sameRoute}</p>
+              <p className="muted">{formatContinuousSun(route.shortest)}</p>
+            </>
           ) : (
             <>
               <button
@@ -106,6 +109,10 @@ export function Panel({
               >
                 <strong>{copy.legendShortest}</strong>{" "}
                 {formatPath(route.shortest)}
+                <br />
+                <span className="muted">
+                  {formatContinuousSun(route.shortest)}
+                </span>
               </button>
               {route.shadiest && (
                 <button
@@ -119,6 +126,10 @@ export function Panel({
                 >
                   <strong>{copy.legendShade}</strong>{" "}
                   {formatPath(route.shadiest)}
+                  <br />
+                  <span className="muted">
+                    {formatContinuousSun(route.shadiest)}
+                  </span>
                 </button>
               )}
               {route.shadiest && (

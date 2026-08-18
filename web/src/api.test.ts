@@ -1,6 +1,21 @@
 import { describe, expect, it } from "vitest";
-import { formatPath, localInputToIso, shadowsQuery } from "./api";
+import { formatContinuousSun, formatPath, localInputToIso, shadowsQuery } from "./api";
 import type { PathDto } from "./types";
+
+function samplePath(over: Partial<PathDto> = {}): PathDto {
+  return {
+    coordinates: [],
+    distance_m: 1200,
+    duration_min: 15,
+    shade_m: 240,
+    sun_m: 960,
+    shade_pct: 20,
+    max_continuous_sun_m: 24,
+    max_continuous_sun_seconds: 18,
+    water_spots: [],
+    ...over,
+  };
+}
 
 describe("api helpers", () => {
   it("localInputToIso appends seconds and JST offset", () => {
@@ -10,15 +25,23 @@ describe("api helpers", () => {
   });
 
   it("formatPath shows distance, minutes, shade pct", () => {
-    const p: PathDto = {
-      coordinates: [],
-      distance_m: 1200,
-      duration_min: 15,
-      shade_m: 240,
-      sun_m: 960,
-      shade_pct: 20,
-    };
-    expect(formatPath(p)).toBe("1200m · 15分 · 日陰 20%");
+    expect(formatPath(samplePath())).toBe("1200m · 15分 · 日陰 20%");
+  });
+
+  it("formatContinuousSun shows max seconds", () => {
+    expect(formatContinuousSun(samplePath())).toBe("連続直射日光 最大18秒");
+  });
+
+  it("formatContinuousSun uses minutes when >= 60 seconds", () => {
+    expect(
+      formatContinuousSun(samplePath({ max_continuous_sun_seconds: 135 })),
+    ).toBe("連続直射日光 最大2分15秒");
+  });
+
+  it("formatContinuousSun omits leftover seconds at whole minutes", () => {
+    expect(
+      formatContinuousSun(samplePath({ max_continuous_sun_seconds: 120 })),
+    ).toBe("連続直射日光 最大2分");
   });
 
   it("shadowsQuery omits bbox when the viewport is unknown", () => {

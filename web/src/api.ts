@@ -1,3 +1,4 @@
+import { copy } from "./copy";
 import type { Bbox, PathDto, Pin, RouteResponse } from "./types";
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
@@ -52,4 +53,13 @@ export function localInputToIso(local: string): string {
 
 export function formatPath(p: PathDto): string {
   return `${p.distance_m}m · ${p.duration_min}分 · 日陰 ${p.shade_pct}%`;
+}
+
+export function formatContinuousSun(p: PathDto): string {
+  const s = p.max_continuous_sun_seconds;
+  const min = Math.floor(s / 60);
+  const sec = s % 60;
+  const label =
+    min === 0 ? `${sec}秒` : sec === 0 ? `${min}分` : `${min}分${sec}秒`;
+  return copy.continuousSun(label);
 }

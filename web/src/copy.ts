@@ -12,6 +12,7 @@ export const copy = {
   search: "ルートを探す",
   reset: "やり直す",
   sameRoute: "同じルートです",
+  continuousSun: (label: string) => `連続直射日光 最大${label}`,
   longer: (m: number) => `日陰ルートは ${m}m 長いです`,
   muchLonger: "日陰ルートは最短よりかなり長いです",
   nightOnly: "夜間のため日陰ルートはありません",
