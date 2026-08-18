@@ -1,0 +1,31 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "osm-near",
+        "name": null,
+        "type": "DRINKING_WATER",
+        "source": "OSM",
+        "bottle": null,
+        "access": null,
+        "opening_hours": null
+      },
+      "geometry": { "type": "Point", "coordinates": [139.70160, 35.65800] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "osm-far",
+        "name": "遠い水",
+        "type": "DRINKING_WATER",
+        "source": "OSM",
+        "bottle": "yes",
+        "access": "yes",
+        "opening_hours": "09:00-18:00"
+      },
+      "geometry": { "type": "Point", "coordinates": [139.71000, 35.66500] }
+    }
+  ]
+}
