@@ -11,10 +11,11 @@ from shapely.geometry import mapping, shape
 
 from hikage_navi.errors import RouteError
 from hikage_navi.graph import load_walk_graph
-from hikage_navi.schemas import PathDto, RouteRequest, RouteResponse
+from hikage_navi.schemas import PathDto, RouteRequest, RouteResponse, WaterSpotDto
 from hikage_navi.service import plan_routes
 from hikage_navi.shadows import BuildingIndex, ShadowIndex, shadow_margin_m
 from hikage_navi.sun import is_night, sun_position
+from hikage_navi.water import load_water_spots, nearby_water_spots
 
 ROOT = Path(__file__).resolve().parents[3]
 SHADOW_CACHE_SIZE = 8
@@ -53,10 +54,12 @@ def load_ctx():
             for f in buildings_raw["features"]
         ]
     )
-    return graph, boundary, buildings
+    water_spots = load_water_spots(d / "shibuya-water-spots.geojson")
+    return graph, boundary, buildings, water_spots
 
 
-def _path_dto(p) -> PathDto:
+def _path_dto(p, spots) -> PathDto:
+    matches = nearby_water_spots(spots, p.coords) if p.coords else []
     return PathDto(
         coordinates=[[c[0], c[1]] for c in p.coords],
         distance_m=p.distance_m,
@@ -66,6 +69,21 @@ def _path_dto(p) -> PathDto:
         shade_pct=p.shade_pct,
         max_continuous_sun_m=p.max_continuous_sun_m,
         max_continuous_sun_seconds=p.max_continuous_sun_seconds,
+        water_spots=[
+            WaterSpotDto(
+                id=m.id,
+                name=m.name,
+                lat=m.lat,
+                lon=m.lon,
+                type=m.type,
+                source=m.source,
+                bottle_refill=m.bottle_refill,
+                access=m.access,
+                opening_hours=m.opening_hours,
+                route_distance_m=m.route_distance_m,
+            )
+            for m in matches
+        ],
     )
 
 
@@ -80,7 +98,7 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    graph, boundary, buildings = load_ctx()
+    graph, boundary, buildings, water_spots = load_ctx()
     rendered: dict[tuple, object] = {}
 
     def shadow_geometry(alt: float, az: float, window):
@@ -150,8 +168,8 @@ def create_app() -> FastAPI:
             ) from exc
         return RouteResponse(
             night=result.night,
-            shortest=_path_dto(result.shortest),
-            shadiest=_path_dto(result.shadiest) if result.shadiest else None,
+            shortest=_path_dto(result.shortest, water_spots),
+            shadiest=_path_dto(result.shadiest, water_spots) if result.shadiest else None,
             same_route=result.same_route,
             long_detour=result.long_detour,
             warning=result.warning,

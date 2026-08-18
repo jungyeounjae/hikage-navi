@@ -14,6 +14,19 @@ class RouteRequest(BaseModel):
     datetime: datetime
 
 
+class WaterSpotDto(BaseModel):
+    id: str
+    name: str | None
+    lat: float
+    lon: float
+    type: str
+    source: str
+    bottle_refill: bool | None
+    access: str | None
+    opening_hours: str | None
+    route_distance_m: int
+
+
 class PathDto(BaseModel):
     coordinates: list[list[float]]
     distance_m: int
@@ -23,6 +36,7 @@ class PathDto(BaseModel):
     shade_pct: int
     max_continuous_sun_m: int
     max_continuous_sun_seconds: int
+    water_spots: list[WaterSpotDto] = []
 
 
 class RouteResponse(BaseModel):
