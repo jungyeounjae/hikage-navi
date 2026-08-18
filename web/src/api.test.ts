@@ -6,6 +6,7 @@ import {
   shadowsQuery,
   waterPopupHtml,
   waterPopupLines,
+  waterSpotsToShow,
 } from "./api";
 import type { PathDto } from "./types";
 
@@ -170,5 +171,31 @@ describe("api helpers", () => {
     expect(html).toContain("yes &amp; public");
     expect(html).toContain("利用時間 9:00&lt;script&gt;");
     expect(html).toContain("<br>");
+  });
+
+  it("waterSpotsToShow is empty when the route omits water_spots", () => {
+    const path = samplePath();
+    delete (path as { water_spots?: unknown }).water_spots;
+    expect(waterSpotsToShow(path, true)).toEqual([]);
+    expect(waterSpotsToShow(path, false)).toEqual([]);
+  });
+
+  it("waterSpotsToShow hides spots while the legend is off", () => {
+    const spot = {
+      id: "osm-near",
+      name: null,
+      lat: 35.658,
+      lon: 139.7016,
+      type: "DRINKING_WATER",
+      source: "OSM",
+      bottle_refill: null,
+      access: null,
+      opening_hours: null,
+      route_distance_m: 28,
+    };
+    const path = samplePath({ water_spots: [spot] });
+    expect(waterSpotsToShow(path, false)).toEqual([]);
+    expect(waterSpotsToShow(path, true)).toEqual([spot]);
+    expect(waterSpotsToShow(undefined, true)).toEqual([]);
   });
 });

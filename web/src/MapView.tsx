@@ -4,7 +4,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { copy } from "./copy";
 import type { AppState, Bbox, Pin } from "./types";
 import { pointInBoundary } from "./geo";
-import { waterPopupHtml } from "./api";
+import { waterPopupHtml, waterSpotsToShow } from "./api";
 
 type Props = {
   state: AppState;
@@ -247,7 +247,7 @@ export function MapView({
       state.selected === "shadiest" && state.route?.shadiest
         ? state.route.shadiest
         : state.route?.shortest;
-    const spots = state.waterVisible && path ? path.water_spots : [];
+    const spots = waterSpotsToShow(path, state.waterVisible);
 
     for (const spot of spots) {
       const root = document.createElement("div");

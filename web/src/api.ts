@@ -103,3 +103,11 @@ export function escapeHtml(text: string): string {
 export function waterPopupHtml(spot: WaterSpotDto): string {
   return waterPopupLines(spot).map(escapeHtml).join("<br>");
 }
+
+export function waterSpotsToShow(
+  path: { water_spots?: WaterSpotDto[] | null } | null | undefined,
+  waterVisible: boolean,
+): WaterSpotDto[] {
+  if (!waterVisible || !path || !Array.isArray(path.water_spots)) return [];
+  return path.water_spots;
+}
