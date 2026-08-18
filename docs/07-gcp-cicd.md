@@ -14,6 +14,7 @@ Vite + React 프론트는 정적 파일이라 Vercel이 가장 단순하다.
 GCP에서 배우고 싶은 것(CI/CD, Artifact Registry)은 **API 이미지 한 장**으로 충분하다. 웹까지 Docker로 올리면 학습은 늘지만 운영만 복잡해진다.
 
 ```
+테스트: git push → GitHub Actions (pytest + vitest)
 프론트: git push → Vercel (정적 사이트)
 API:    git push → Cloud Build → Artifact Registry → Cloud Run
 ```
@@ -53,19 +54,25 @@ asia-northeast1-docker.pkg.dev/<PROJECT>/hikage-navi/api:<git-sha>
 `main` push → 설치 → 빌드 → 배포. Vercel 대시보드에서 연결하면 된다.  
 별도 `Dockerfile.web`은 없다.
 
+### GitHub Actions (테스트)
+
+`master` push 및 pull request 시 `.github/workflows/test.yml`이 돈다.
+
+1. API: `pip install -e ".[dev]"` → `pytest tests/` (픽스처 데이터)
+2. 웹: `npm ci` → `npm test`
+
+테스트가 실패해도 Cloud Build·Vercel 배포는 **따로** 돈다. 배포를 막으려면 GitHub 브랜치 보호에서 이 워크플로를 필수 검사로 두면 된다.
+
 ### Cloud Build (API)
 
-`main` push (또는 API 경로 변경) 시:
+`master` push 시:
 
-1. 서버 테스트 (없으면 skip)
-2. `api` 이미지 빌드 → Artifact Registry
-3. Cloud Run `hikage-navi-api` 새 리비전
+1. `api` 이미지 빌드 → Artifact Registry
+2. Cloud Run `hikage-navi-api` 새 리비전
 
 구현 파일: `Dockerfile.api`, `cloudbuild.yaml`
 
 CORS: api는 Vercel origin만 허용. (`https://<project>.vercel.app` 및 커스텀 도메인이 있으면 그것)
-
-GitHub Actions는 쓰지 않는다. 웹 CI는 Vercel, API CI는 Cloud Build.
 
 ## 5. 로컬 vs 배포
 
