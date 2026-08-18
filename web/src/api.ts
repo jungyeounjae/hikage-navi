@@ -75,3 +75,16 @@ export function waterPopupLines(spot: WaterSpotDto): string[] {
   if (spot.opening_hours) lines.push(`利用時間 ${spot.opening_hours}`);
   return lines;
 }
+
+export function escapeHtml(text: string): string {
+  return text
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+export function waterPopupHtml(spot: WaterSpotDto): string {
+  return waterPopupLines(spot).map(escapeHtml).join("<br>");
+}

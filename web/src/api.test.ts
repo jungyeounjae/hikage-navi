@@ -4,6 +4,7 @@ import {
   formatPath,
   localInputToIso,
   shadowsQuery,
+  waterPopupHtml,
   waterPopupLines,
 } from "./api";
 import type { PathDto } from "./types";
@@ -108,5 +109,27 @@ describe("api helpers", () => {
       "yes",
       "利用時間 9:00〜18:00",
     ]);
+  });
+
+  it("waterPopupHtml escapes < and & before setHTML join", () => {
+    const html = waterPopupHtml({
+      id: "osm-xss",
+      name: '<img src=x onerror=alert(1)> & more',
+      lat: 35.658,
+      lon: 139.7016,
+      type: "DRINKING_WATER",
+      source: "OSM",
+      bottle_refill: null,
+      access: "yes & public",
+      opening_hours: "9:00<script>",
+      route_distance_m: 28,
+    });
+    expect(html).not.toContain("<img");
+    expect(html).not.toContain("<script>");
+    expect(html).not.toContain("& more");
+    expect(html).toContain("&lt;img src=x onerror=alert(1)&gt; &amp; more");
+    expect(html).toContain("yes &amp; public");
+    expect(html).toContain("利用時間 9:00&lt;script&gt;");
+    expect(html).toContain("<br>");
   });
 });

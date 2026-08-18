@@ -4,7 +4,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { copy } from "./copy";
 import type { AppState, Bbox, Pin } from "./types";
 import { pointInBoundary } from "./geo";
-import { waterPopupLines } from "./api";
+import { waterPopupHtml } from "./api";
 
 type Props = {
   state: AppState;
@@ -258,9 +258,7 @@ export function MapView({
       const marker = new maplibregl.Marker({ element: root })
         .setLngLat([spot.lon, spot.lat])
         .setPopup(
-          new maplibregl.Popup({ offset: 12 }).setHTML(
-            waterPopupLines(spot).join("<br>"),
-          ),
+          new maplibregl.Popup({ offset: 12 }).setHTML(waterPopupHtml(spot)),
         )
         .addTo(map);
       waterMarkers.current.push(marker);
