@@ -106,9 +106,48 @@ describe("api helpers", () => {
       "💧 給水可能",
       "ルートから約30m",
       "マイボトル給水可能",
-      "yes",
       "利用時間 9:00〜18:00",
     ]);
+    expect(lines).not.toContain("yes");
+  });
+
+  it("waterPopupLines omits OSM access machine tags", () => {
+    const tags = ["yes", "NO", "Private", "permissive", "customers", "unknown"];
+    for (const access of tags) {
+      const lines = waterPopupLines({
+        id: `osm-${access}`,
+        name: "代々木公園",
+        lat: 35.671,
+        lon: 139.695,
+        type: "DRINKING_WATER",
+        source: "OSM",
+        bottle_refill: null,
+        access,
+        opening_hours: null,
+        route_distance_m: 30,
+      });
+      expect(lines).toEqual([
+        "代々木公園",
+        "💧 給水可能",
+        "ルートから約30m",
+      ]);
+    }
+  });
+
+  it("waterPopupLines keeps a human-readable access line", () => {
+    const lines = waterPopupLines({
+      id: "osm-human-access",
+      name: "代々木公園",
+      lat: 35.671,
+      lon: 139.695,
+      type: "DRINKING_WATER",
+      source: "OSM",
+      bottle_refill: null,
+      access: "公園内・無料",
+      opening_hours: null,
+      route_distance_m: 30,
+    });
+    expect(lines).toContain("公園内・無料");
   });
 
   it("waterPopupHtml escapes < and & before setHTML join", () => {

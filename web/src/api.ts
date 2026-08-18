@@ -64,6 +64,19 @@ export function formatContinuousSun(p: PathDto): string {
   return copy.continuousSun(label);
 }
 
+const OSM_ACCESS_MACHINE_TAGS = new Set([
+  "yes",
+  "no",
+  "private",
+  "permissive",
+  "customers",
+  "unknown",
+]);
+
+function isOsmAccessMachineTag(value: string): boolean {
+  return OSM_ACCESS_MACHINE_TAGS.has(value.trim().toLowerCase());
+}
+
 export function waterPopupLines(spot: WaterSpotDto): string[] {
   const lines: string[] = [];
   if (spot.name) lines.push(spot.name);
@@ -71,7 +84,9 @@ export function waterPopupLines(spot: WaterSpotDto): string[] {
   lines.push("💧 給水可能");
   lines.push(`ルートから約${spot.route_distance_m}m`);
   if (spot.bottle_refill) lines.push("マイボトル給水可能");
-  if (spot.access) lines.push(spot.access);
+  if (spot.access && !isOsmAccessMachineTag(spot.access)) {
+    lines.push(spot.access);
+  }
   if (spot.opening_hours) lines.push(`利用時間 ${spot.opening_hours}`);
   return lines;
 }
