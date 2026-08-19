@@ -14,7 +14,6 @@ type Props = {
   onMapReady: () => void;
   onTap: (point: Pin) => void;
   onViewportChange: (bbox: Bbox) => void;
-  onToggleWater: () => void;
 };
 
 const EMPTY: GeoJSON.FeatureCollection = {
@@ -45,7 +44,6 @@ export function MapView({
   onMapReady,
   onTap,
   onViewportChange,
-  onToggleWater,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -278,14 +276,6 @@ export function MapView({
           <i className="swatch shade" />
           {copy.legendShade}
         </span>
-        <label className="legend-water">
-          <input
-            type="checkbox"
-            checked={state.waterVisible}
-            onChange={onToggleWater}
-          />
-          💧 {copy.waterToggle}
-        </label>
       </div>
     </div>
   );
