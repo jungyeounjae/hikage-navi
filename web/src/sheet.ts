@@ -51,6 +51,12 @@ export function sheetAfterMapTap(): SheetSnap {
   return "peek";
 }
 
+export function sheetHeightVar(snap: SheetSnap): string {
+  if (snap === "peek") return "var(--sheet-peek)";
+  if (snap === "half") return "var(--sheet-half)";
+  return "var(--sheet-expanded)";
+}
+
 export function clampShadePct(n: number): number {
   if (!Number.isFinite(n)) return 0;
   return Math.min(100, Math.max(0, Math.round(n)));

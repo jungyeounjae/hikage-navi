@@ -7,9 +7,14 @@ import {
 } from "./api";
 import { copy } from "./copy";
 import { MapView } from "./MapView";
-import { Panel } from "./Panel";
+import { LocationFab, Panel, createLocateHandler } from "./Panel";
 import { TopBar } from "./TopBar";
 import { initialState, reduce } from "./state";
+import {
+  advanceSheetSnap,
+  sheetAfterMapTap,
+  type SheetSnap,
+} from "./sheet";
 import type { Bbox, Pin } from "./types";
 import "./styles.css";
 
@@ -28,6 +33,7 @@ export function App() {
   const [viewport, setViewport] = useState<Bbox | null>(null);
   const [loading, setLoading] = useState(false);
   const [night, setNight] = useState(false);
+  const [sheetSnap, setSheetSnap] = useState<SheetSnap>("peek");
 
   const onMapReady = useCallback(() => setMapReady(true), []);
   const onViewportChange = useCallback((bbox: Bbox) => {
@@ -35,7 +41,12 @@ export function App() {
   }, []);
   const onTap = useCallback((point: Pin) => {
     dispatch({ type: "MAP_TAP", point });
+    setSheetSnap(sheetAfterMapTap());
   }, []);
+  const locate = useCallback(
+    () => createLocateHandler(dispatch, boundary)(),
+    [boundary],
+  );
 
   useEffect(() => {
     fetchBoundary()
@@ -99,8 +110,7 @@ export function App() {
   }, [state.datetimeLocal]);
 
   return (
-    <div className="app">
-      <TopBar state={state} dispatch={dispatch} night={night} />
+    <div className={`app snap-${sheetSnap}`}>
       <MapView
         state={state}
         boundary={boundary}
@@ -111,12 +121,15 @@ export function App() {
         onViewportChange={onViewportChange}
         onToggleWater={() => dispatch({ type: "TOGGLE_WATER" })}
       />
+      <TopBar state={state} dispatch={dispatch} night={night} />
+      <LocationFab onClick={locate} />
       <Panel
         state={state}
         dispatch={dispatch}
         loading={loading}
         onSearch={onSearch}
-        boundary={boundary}
+        snap={sheetSnap}
+        onAdvanceSnap={() => setSheetSnap((s) => advanceSheetSnap(s))}
       />
     </div>
   );

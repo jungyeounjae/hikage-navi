@@ -7,6 +7,7 @@ import {
   peekHeadline,
   selectedPath,
   sheetAfterMapTap,
+  sheetHeightVar,
 } from "./sheet";
 import { initialState, reduce } from "./state";
 import type { PathDto, RouteResponse } from "./types";
@@ -96,6 +97,12 @@ describe("sheet snap", () => {
 
   it("map tap collapses to peek", () => {
     expect(sheetAfterMapTap()).toBe("peek");
+  });
+
+  it("sheetHeightVar maps snap to CSS variables", () => {
+    expect(sheetHeightVar("peek")).toBe("var(--sheet-peek)");
+    expect(sheetHeightVar("half")).toBe("var(--sheet-half)");
+    expect(sheetHeightVar("expanded")).toBe("var(--sheet-expanded)");
   });
 });
 
