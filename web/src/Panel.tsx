@@ -8,6 +8,7 @@ import { ShadeRing } from "./ShadeRing";
 import {
   peekHeadline,
   sheetHeightVar,
+  showPeekSearch,
   type SheetSnap,
 } from "./sheet";
 
@@ -105,8 +106,9 @@ export function Panel({
         aria-expanded={snap !== "peek"}
         onClick={onAdvanceSnap}
       />
+      {snap === "peek" && (
       <div className="sheet-peek">
-        {phase === "S2" && !loading ? (
+        {showPeekSearch(phase, loading, snap) ? (
           <button
             type="button"
             className="primary-btn"
@@ -129,8 +131,18 @@ export function Panel({
           <p className="peek-line">{headline}</p>
         )}
       </div>
+      )}
 
       <div className="sheet-body">
+        <label className="sheet-water">
+          <input
+            type="checkbox"
+            checked={state.waterVisible}
+            onChange={() => dispatch({ type: "TOGGLE_WATER" })}
+          />
+          {copy.waterToggle}
+        </label>
+
         {phase === "S0" && <p className="muted">{copy.s0sub}</p>}
 
         {phase === "S1" && (

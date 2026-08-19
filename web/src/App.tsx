@@ -119,7 +119,6 @@ export function App() {
         onMapReady={onMapReady}
         onTap={onTap}
         onViewportChange={onViewportChange}
-        onToggleWater={() => dispatch({ type: "TOGGLE_WATER" })}
       />
       <TopBar state={state} dispatch={dispatch} night={night} />
       <LocationFab onClick={locate} />

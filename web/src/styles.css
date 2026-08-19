@@ -170,12 +170,13 @@ body,
   cursor: pointer;
 }
 
-.legend-water {
+.sheet-water {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
+  gap: 0.4rem;
   min-height: 44px;
   cursor: pointer;
+  font-size: 0.9rem;
 }
 
 .panel {
@@ -365,6 +366,10 @@ button:disabled {
   .snap-peek .sheet-body {
     display: grid;
     gap: 0.5rem;
+  }
+
+  .sheet-peek {
+    display: none;
   }
 
   .location-fab {

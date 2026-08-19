@@ -8,6 +8,7 @@ import {
   selectedPath,
   sheetAfterMapTap,
   sheetHeightVar,
+  showPeekSearch,
 } from "./sheet";
 import { initialState, reduce } from "./state";
 import type { PathDto, RouteResponse } from "./types";
@@ -103,6 +104,16 @@ describe("sheet snap", () => {
     expect(sheetHeightVar("peek")).toBe("var(--sheet-peek)");
     expect(sheetHeightVar("half")).toBe("var(--sheet-half)");
     expect(sheetHeightVar("expanded")).toBe("var(--sheet-expanded)");
+  });
+});
+
+describe("showPeekSearch", () => {
+  it("is only on S2 peek, not when the sheet body is open", () => {
+    expect(showPeekSearch("S2", false, "peek")).toBe(true);
+    expect(showPeekSearch("S2", false, "half")).toBe(false);
+    expect(showPeekSearch("S2", false, "expanded")).toBe(false);
+    expect(showPeekSearch("S2", true, "peek")).toBe(false);
+    expect(showPeekSearch("S0", false, "peek")).toBe(false);
   });
 });
 

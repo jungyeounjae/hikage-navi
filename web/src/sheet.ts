@@ -1,6 +1,6 @@
 import { copy } from "./copy";
 import { formatPath } from "./api";
-import type { AppState, PathDto } from "./types";
+import type { AppState, PathDto, Phase } from "./types";
 
 export type SheetSnap = "peek" | "half" | "expanded";
 
@@ -60,4 +60,12 @@ export function sheetHeightVar(snap: SheetSnap): string {
 export function clampShadePct(n: number): number {
   if (!Number.isFinite(n)) return 0;
   return Math.min(100, Math.max(0, Math.round(n)));
+}
+
+export function showPeekSearch(
+  phase: Phase,
+  loading: boolean,
+  snap: SheetSnap,
+): boolean {
+  return phase === "S2" && !loading && snap === "peek";
 }
