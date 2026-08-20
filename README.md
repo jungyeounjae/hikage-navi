@@ -46,12 +46,20 @@ CI는 GitHub Actions로 돌고, 공개 배포(Vercel / Cloud Run)는 아직입�
 ## 로컬 실행 (요약)
 
 ```bash
-# API (터미널 1)
-export HIKAGE_DATA_DIR=/path/to/hikage-navi/data/processed
+# API (터미널 1) — tokyo23 데이터가 있으면 자동 인식
+export HIKAGE_DATA_DIR=/path/to/hikage-navi/data/processed/tokyo23
 cd api && . .venv/bin/activate && uvicorn hikage_navi.app:app --port 8000
 
 # 웹 (터미널 2)
 cd web && npm run dev
+```
+
+23区 데이터 생성 (최초 1회, 수 시간 걸릴 수 있음):
+
+```bash
+cd api && . .venv/bin/activate && pip install -e ".[preprocess]"
+export HIKAGE_ROOT=/path/to/hikage-navi
+python scripts/preprocess.py --wards all
 ```
 
 - API: `http://127.0.0.1:8000` (`/health`, `/docs`)

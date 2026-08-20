@@ -587,13 +587,13 @@ def load_boundary_geom():
     return geom
 
 
-def build_water_spots(boundary_geom) -> None:
+def build_water_spots(boundary_geom, out: Path | None = None) -> None:
     import osmnx as ox
 
-    print("4/5 OSM 급수 스팟 (Point만)…")
+    print("OSM 급수 스팟 (Point만)…")
     ox.settings.use_cache = True
     ox.settings.cache_folder = str(RAW / "osmnx_cache")
-    out = PROCESSED / "shibuya-water-spots.geojson"
+    dest = out if out is not None else PROCESSED / "shibuya-water-spots.geojson"
 
     try:
         if USE_PBF:
@@ -623,11 +623,11 @@ def build_water_spots(boundary_geom) -> None:
         print(f"  급수 추출 실패 (산출물 생략): {exc}", file=sys.stderr)
         return
 
-    out.write_text(
+    dest.write_text(
         json.dumps({"type": "FeatureCollection", "features": features}, ensure_ascii=False),
         encoding="utf-8",
     )
-    print(f"  → {out} ({len(features)} points)")
+    print(f"  → {dest} ({len(features)} points)")
 
 
 def run_shibuya() -> None:
@@ -666,8 +666,10 @@ def run_tokyo23(ward_codes: list[str]) -> None:
 
     print(f"2/3 PLATEAU 건물…")
     build_tokyo23_buildings(ward_codes, ward_geoms, paths)
-    print("3/3 보행 그래프…")
+    print("3/4 보행 그래프…")
     build_walk_graph(union, out=paths["walk_graph"], label="tokyo23 union")
+    print("4/4 급수 스팟…")
+    build_water_spots(union, out=paths["root"] / "water-spots.geojson")
     print("완료:", paths["root"])
 
 
