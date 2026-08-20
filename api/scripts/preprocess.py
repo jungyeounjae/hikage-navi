@@ -425,6 +425,13 @@ def build_tokyo23_buildings(ward_codes: list[str], ward_geoms: dict, paths: dict
             json.dumps({"type": "FeatureCollection", "features": features}, ensure_ascii=False),
             encoding="utf-8",
         )
+        max_h = max((f["properties"]["height"] for f in features), default=0.0)
+        meta = {
+            "bounds": list(ward_geoms[code].bounds),
+            "max_height_m": max_h,
+        }
+        meta_path = out.parent / "meta.json"
+        meta_path.write_text(json.dumps(meta, ensure_ascii=False), encoding="utf-8")
         print(f"  → {out} ({len(features)} buildings)")
         if len(features) < 100:
             print(f"  경고: {code} 건물 수 < 100", file=sys.stderr)

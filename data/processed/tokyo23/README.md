@@ -12,6 +12,7 @@ tokyo23/
   walk-graph.json                  # union 폴리곤에서 뽑은 OSM 보행 그래프
   wards/
     13101/buildings.geojson        # 구별 PLATEAU 건물 (height ≥ 2)
+    13101/meta.json                # bounds, max_height_m (런타임 구 선택용)
     13113/buildings.geojson
     …
 ```

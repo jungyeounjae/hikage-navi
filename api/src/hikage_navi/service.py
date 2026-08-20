@@ -16,7 +16,8 @@ from hikage_navi.routing import (
     shadiest_path,
     shortest_path,
 )
-from hikage_navi.shadows import BuildingIndex, ShadowIndex, shadow_margin_m
+from hikage_navi.building_store import BuildingStore
+from hikage_navi.shadows import BuildingIndex, ShadowIndex, shadow_margin_m, MAX_SHADOW_MARGIN_M
 from hikage_navi.sun import is_night, sun_position
 from hikage_navi.wards import OUTSIDE_MESSAGE
 
@@ -33,6 +34,11 @@ def _area_around(graph: WalkGraph, bbox, src: int, dst: int) -> WalkGraph:
 
 
 def _shadows_in(buildings, bbox, altitude_deg: float, azimuth_deg: float) -> ShadowIndex:
+    if isinstance(buildings, BuildingStore):
+        pre = buildings.buildings_in_bbox(bbox, margin_m=MAX_SHADOW_MARGIN_M)
+        margin = shadow_margin_m(altitude_deg, pre.max_height_m)
+        selected = pre.select(bbox, margin_m=margin)
+        return ShadowIndex.from_buildings(selected, altitude_deg, azimuth_deg)
     index = buildings if isinstance(buildings, BuildingIndex) else BuildingIndex(buildings)
     margin = shadow_margin_m(altitude_deg, index.max_height_m)
     return ShadowIndex.from_buildings(

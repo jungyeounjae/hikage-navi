@@ -104,5 +104,6 @@ cd web && npm test
 - [x] GitHub Actions CI
 - [x] API Docker / Cloud Build 설정 파일 (`Dockerfile.api`, `cloudbuild.yaml`)
 - [x] 모바일 웹 UI (태스크 11)
-- [ ] 東京23区 확대 (태스크 12–14)
+- [x] 東京23区 문안·전처리 (태스크 12–13)
+- [x] 東京23区 런타임 로드 (태스크 14)
 - [ ] 공개 배포 (Vercel + Cloud Run)
