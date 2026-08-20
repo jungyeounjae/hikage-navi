@@ -8,7 +8,10 @@
   --short: #1d4ed8;
   --shade: #b45309;
   --glass: color-mix(in srgb, white 82%, transparent);
-  --sheet-peek: calc(88px + env(safe-area-inset-bottom, 0px));
+  --sheet-peek: min(
+    calc(88px + env(safe-area-inset-bottom, 0px)),
+    40dvh
+  );
   --sheet-half: min(38vh, 320px);
   --sheet-expanded: min(52vh, 480px);
   --radius: 12px;
@@ -78,6 +81,7 @@ body,
   min-height: 44px;
   padding: 0.35rem 0.5rem;
   font: inherit;
+  font-size: 16px;
   border: 1px solid var(--line);
   border-radius: 999px;
   background: #fff;
@@ -86,6 +90,7 @@ body,
 .map-wrap {
   position: absolute;
   inset: 0;
+  min-height: 120px;
 }
 
 .map {
@@ -283,13 +288,24 @@ button:disabled {
   position: absolute;
   z-index: 2;
   right: 0.75rem;
-  bottom: calc(var(--sheet-peek) + 0.75rem);
   max-width: min(16rem, calc(100vw - 1.5rem));
   border-color: var(--accent);
   color: var(--accent);
   background: var(--glass);
   backdrop-filter: blur(16px);
   border-radius: 999px;
+}
+
+.snap-peek .location-fab {
+  bottom: calc(var(--sheet-peek) + 0.75rem);
+}
+
+.snap-half .location-fab {
+  bottom: calc(var(--sheet-half) + 0.75rem);
+}
+
+.snap-expanded .location-fab {
+  bottom: calc(var(--sheet-expanded) + 0.75rem);
 }
 
 .path-card {
@@ -347,6 +363,56 @@ button:disabled {
   overflow: hidden;
   clip: rect(0, 0, 0, 0);
   border: 0;
+}
+
+@media (max-width: 899px) {
+  .topbar {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    row-gap: 0.35rem;
+  }
+
+  .topbar-titles {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .datetime {
+    flex: 1 1 100%;
+  }
+
+  .datetime input {
+    width: 100%;
+  }
+}
+
+@media (max-width: 430px) {
+  .legend {
+    top: calc(6.25rem + env(safe-area-inset-top, 0px));
+  }
+}
+
+@media (max-height: 500px) and (orientation: landscape) {
+  :root {
+    --sheet-peek: min(
+      calc(72px + env(safe-area-inset-bottom, 0px)),
+      40dvh
+    );
+    --sheet-half: min(34vh, 180px);
+    --sheet-expanded: min(38vh, 220px);
+  }
+
+  .topbar {
+    padding: 0.35rem 0.6rem;
+  }
+
+  .legend {
+    top: calc(3.25rem + env(safe-area-inset-top, 0px));
+  }
+
+  .map-wrap {
+    min-height: 140px;
+  }
 }
 
 @media (min-width: 900px) {

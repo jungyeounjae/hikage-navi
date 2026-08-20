@@ -27,7 +27,6 @@ CI は GitHub Actions で回し、公開デプロイ（Vercel / Cloud Run）は�
 
 ## 次にやること
 
-- スマホブラウザ向け UI
 - 対象エリアを東京23区へ拡大
 - 公開デプロイ: Web は Vercel、API は Cloud Build → Artifact Registry → Cloud Run（[docs/07-gcp-cicd.md](docs/07-gcp-cicd.md)）
 
@@ -104,6 +103,6 @@ cd web && npm test
 - [x] 連続直射日光・ルート周辺の給水スポット
 - [x] GitHub Actions CI
 - [x] API Docker / Cloud Build 設定（`Dockerfile.api`, `cloudbuild.yaml`）
-- [ ] モバイル Web UI（タスク 11）
+- [x] モバイル Web UI（タスク 11）
 - [ ] 東京23区への拡大（タスク 12–14）
 - [ ] 公開デプロイ（Vercel + Cloud Run）
