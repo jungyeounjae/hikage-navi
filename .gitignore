@@ -20,6 +20,8 @@ data/processed/*
 !data/processed/shibuya-buildings.geojson
 !data/processed/shibuya-walk-graph.json
 !data/processed/shibuya-water-spots.geojson
+!data/processed/tokyo23/
+!data/processed/tokyo23/README.md
 *.osm.pbf
 *.gml
 *.citygml
