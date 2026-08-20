@@ -14,7 +14,7 @@ Mac 디스크에 `data/raw`(CityGML ZIP·압축 해제)를 **두지 않는다**.
 export PROJECT_ID=your-gcp-project
 export REGION=asia-northeast1
 export ZONE=asia-northeast1-a
-export BUCKET=${PROJECT_ID}-hikage-navi
+export BUCKET=${PROJECT_ID}-data
 export INSTANCE=hikage-preprocess
 
 gcloud config set project "$PROJECT_ID"
@@ -23,7 +23,7 @@ gcloud services enable compute.googleapis.com storage.googleapis.com
 # 버킷 (이미 있으면 생략)
 gsutil mb -l "$REGION" "gs://${BUCKET}"
 
-# VM (200GB, e2-standard-4)
+# VM (200GB, e2-standard-4) — 이미 hikage-preprocess 가 있으면 생략
 gcloud compute instances create "$INSTANCE" \
   --zone="$ZONE" \
   --machine-type=e2-standard-4 \
