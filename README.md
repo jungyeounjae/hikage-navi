@@ -27,8 +27,8 @@ CI는 GitHub Actions로 돌고, 공개 배포(Vercel / Cloud Run)는 아직입�
 
 ## 다음
 
-- 대상 지역을 東京23区로 확대
 - 공개 배포: 웹은 Vercel, API는 Cloud Build → Artifact Registry → Cloud Run ([docs/07-gcp-cicd.md](docs/07-gcp-cicd.md))
+- 23区 raw·전처리는 GCE VM + GCS ([docs/08-gce-preprocess.md](docs/08-gce-preprocess.md)) — Mac에 `data/raw`를 두지 않음
 
 ## 기술
 
@@ -39,6 +39,7 @@ CI는 GitHub Actions로 돌고, 공개 배포(Vercel / Cloud Run)는 아직입�
 | CI | GitHub Actions (`pytest` + `vitest`) |
 | 웹 배포 | Vercel (예정) |
 | API 배포 | Cloud Build → Artifact Registry → Cloud Run (예정) |
+| 전처리 데이터 | GCE (작업) + GCS (보관) |
 
 배경 지도는 국토지리원 타일을 브라우저가 직접 받습니다.  
 우리 API는 구 경계(`/boundary`), 건물 그림자(`/shadows`), 경로·급수(`/routes`)만 줍니다.
@@ -46,19 +47,33 @@ CI는 GitHub Actions로 돌고, 공개 배포(Vercel / Cloud Run)는 아직입�
 ## 로컬 실행 (요약)
 
 ```bash
-# API (터미널 1)
-export HIKAGE_DATA_DIR=/path/to/hikage-navi/data/processed
+# API (터미널 1) — tokyo23 데이터가 있으면 자동 인식
+export HIKAGE_DATA_DIR=/path/to/hikage-navi/data/processed/tokyo23
 cd api && . .venv/bin/activate && uvicorn hikage_navi.app:app --port 8000
 
 # 웹 (터미널 2)
 cd web && npm run dev
 ```
 
+**23区 데이터:** Mac에서 `--wards all`을 돌리지 않는다 (디스크 부족).  
+GCE에서 전처리 후 GCS에 올리고, 로컬은 processed만 받는다.
+
+```bash
+export HIKAGE_GCP_PROJECT=your-gcp-project
+./scripts/gce-preprocess-start.sh
+# VM에서 preprocess.py --wards all 실행 → 끝나면
+./scripts/gce-preprocess-sync-up.sh
+./scripts/gce-preprocess-stop.sh
+./scripts/gce-preprocess-sync-down.sh   # Mac에 tokyo23만
+```
+
+상세: [docs/08-gce-preprocess.md](docs/08-gce-preprocess.md).
+
 - API: `http://127.0.0.1:8000` (`/health`, `/docs`)
 - 웹: `http://127.0.0.1:5173`
 
-실데이터는 `api/scripts/preprocess.py`로 PLATEAU·OSM을 받아 `data/processed/`에 둡니다.  
-급수 스팟도 같은 전처리에서 OSM을 읽어 `shibuya-water-spots.geojson`으로 만듭니다. 런타임에 Overpass를 부르지 않습니다.
+`data/raw`(CityGML ZIP·압축 해제)는 gitignore이며 **로컬 보관 대상이 아니다**.  
+런타임에 Overpass를 부르지 않는다.
 
 ## CI
 
@@ -83,6 +98,7 @@ cd web && npm test
 | [docs/05-acceptance.md](docs/05-acceptance.md) | 수용 기준 |
 | [docs/06-tech-stack.md](docs/06-tech-stack.md) | 기술 선택 |
 | [docs/07-gcp-cicd.md](docs/07-gcp-cicd.md) | Vercel / GCP CI/CD |
+| [docs/08-gce-preprocess.md](docs/08-gce-preprocess.md) | GCE 전처리 + GCS 보관 |
 | [docs/superpowers/plans/2026-08-14-hikage-navi-v0.1.md](docs/superpowers/plans/2026-08-14-hikage-navi-v0.1.md) | v0.1 구현 계획 (태스크 1–14) |
 | [FeatureAddition.md](FeatureAddition.md) | 연속 직사광선·급수 스팟 요구 |
 | [docs/superpowers/plans/2026-08-18-continuous-sun-water-spots.md](docs/superpowers/plans/2026-08-18-continuous-sun-water-spots.md) | 위 기능 구현 계획 |
@@ -104,5 +120,7 @@ cd web && npm test
 - [x] GitHub Actions CI
 - [x] API Docker / Cloud Build 설정 파일 (`Dockerfile.api`, `cloudbuild.yaml`)
 - [x] 모바일 웹 UI (태스크 11)
-- [ ] 東京23区 확대 (태스크 12–14)
+- [x] 東京23区 문안·전처리 (태스크 12–13)
+- [x] 東京23区 런타임 로드 (태스크 14)
+- [x] GCE 전처리·GCS 보관 문서·스크립트
 - [ ] 공개 배포 (Vercel + Cloud Run)

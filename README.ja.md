@@ -27,8 +27,8 @@ CI は GitHub Actions で回し、公開デプロイ（Vercel / Cloud Run）は�
 
 ## 次にやること
 
-- 対象エリアを東京23区へ拡大
 - 公開デプロイ: Web は Vercel、API は Cloud Build → Artifact Registry → Cloud Run（[docs/07-gcp-cicd.md](docs/07-gcp-cicd.md)）
+- 23区の raw・前処理は GCE VM + GCS（[docs/08-gce-preprocess.md](docs/08-gce-preprocess.md)）— Mac に `data/raw` を置かない
 
 ## 技術
 
@@ -39,6 +39,7 @@ CI は GitHub Actions で回し、公開デプロイ（Vercel / Cloud Run）は�
 | CI | GitHub Actions（`pytest` + `vitest`） |
 | Web の公開 | Vercel（予定） |
 | API の公開 | Cloud Build → Artifact Registry → Cloud Run（予定） |
+| 前処理データ | GCE（作業）+ GCS（保管） |
 
 背景地図は国土地理院タイルをブラウザが直接取得します。  
 当アプリの API が返すのは区境界（`/boundary`）、建物の影（`/shadows`）、ルートと給水（`/routes`）だけです。
@@ -47,18 +48,20 @@ CI は GitHub Actions で回し、公開デプロイ（Vercel / Cloud Run）は�
 
 ```bash
 # API（ターミナル 1）
-export HIKAGE_DATA_DIR=/path/to/hikage-navi/data/processed
+export HIKAGE_DATA_DIR=/path/to/hikage-navi/data/processed/tokyo23
 cd api && . .venv/bin/activate && uvicorn hikage_navi.app:app --port 8000
 
-# Web（ターミナル 2）
+# Web（ターミ널 2）
 cd web && npm run dev
 ```
+
+**23区データ:** Mac で `--wards all` は回さない（ディスク不足）。  
+GCE で前処理 → GCS へ上げ、ローカルは `processed/tokyo23` のみ取得する。手順は [docs/08-gce-preprocess.md](docs/08-gce-preprocess.md)。
 
 - API: `http://127.0.0.1:8000`（`/health`, `/docs`）
 - Web: `http://127.0.0.1:5173`
 
-実データは `api/scripts/preprocess.py` で PLATEAU・OSM を取得し、`data/processed/` に置きます。  
-給水スポットも同じ前処理で OSM から `shibuya-water-spots.geojson` を作ります。実行時に Overpass は呼びません。
+`data/raw` は gitignore 対象で **ローカル保管しない**。実行時に Overpass は呼びません。
 
 ## CI
 
@@ -83,6 +86,7 @@ cd web && npm test
 | [docs/05-acceptance.md](docs/05-acceptance.md) | 受け入れ基準 |
 | [docs/06-tech-stack.md](docs/06-tech-stack.md) | 技術選定 |
 | [docs/07-gcp-cicd.md](docs/07-gcp-cicd.md) | Vercel / GCP CI/CD |
+| [docs/08-gce-preprocess.md](docs/08-gce-preprocess.md) | GCE 前処理 + GCS 保管 |
 | [docs/superpowers/plans/2026-08-14-hikage-navi-v0.1.md](docs/superpowers/plans/2026-08-14-hikage-navi-v0.1.md) | v0.1 実装計画（タスク 1–14） |
 | [FeatureAddition.md](FeatureAddition.md) | 連続直射日光・給水スポットの要求 |
 | [docs/superpowers/plans/2026-08-18-continuous-sun-water-spots.md](docs/superpowers/plans/2026-08-18-continuous-sun-water-spots.md) | 上記機能の実装計画 |
@@ -104,5 +108,5 @@ cd web && npm test
 - [x] GitHub Actions CI
 - [x] API Docker / Cloud Build 設定（`Dockerfile.api`, `cloudbuild.yaml`）
 - [x] モバイル Web UI（タスク 11）
-- [ ] 東京23区への拡大（タスク 12–14）
+- [x] 東京23区への拡大（タスク 12–14）
 - [ ] 公開デプロイ（Vercel + Cloud Run）

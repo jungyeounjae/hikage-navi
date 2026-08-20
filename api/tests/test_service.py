@@ -51,4 +51,4 @@ def test_outside_raises(graph, buildings, boundary):
             boundary=boundary,
         )
     assert ei.value.code == "outside"
-    assert ei.value.message == "渋谷区内の2点を指定してください"
+    assert ei.value.message == "東京23区内の2点を指定してください"
