@@ -2,18 +2,19 @@
 
 **한국어** | [日本語](README.ja.md)
 
-시부야구 보행자를 위한 **그늘 길찾기** 파일럿입니다.
+**東京23区** 보행자를 위한 **그늘 길찾기** 파일럿입니다. (시부야 단일 구 데이터·fixtures로도 동작)
 
 한국의 [그늘로](https://ttubeok.com/)를 참고하되, 대중교통·버스 창가·가로수는 넣지 않습니다.  
-시부야구 안에서 출발·도착을 찍으면 **최단 도보**와 **그늘이 더 많은 도보**를 비교합니다.  
+23区内에서 출발·도착을 찍으면 **최단 도보**와 **그늘이 더 많은 도보**를 비교합니다.  
 경로마다 연속 직사광선과 근처 급수 스팟도 보여 줍니다.
 
-로컬에서 웹·API·시부야 실데이터까지 동작하는 데모를 사용할 수 있습니다.  
-CI는 GitHub Actions로 돌고, 공개 배포(Vercel / Cloud Run)는 아직입니다.
+로컬에서 웹·API·실데이터까지 동작하는 데모를 사용할 수 있습니다.  
+23区 전처리는 Mac 디스크 한계 때문에 **GCE VM + GCS**로 돌립니다.  
+CI는 GitHub Actions, 공개 배포(Vercel / Cloud Run)는 아직입니다.
 
 ## 하는 일 (지금)
 
-- 시부야구 지도에 시간대별 건물 그림자 표시
+- 東京23区(또는 시부야) 지도에 시간대별 건물 그림자 표시
 - 지도 탭으로 출발·도착 지정
 - 최단 경로 vs 그늘 경로 (거리, 시간, 그늘 %)
 - 경로마다 최대 연속 직사광선 거리·시간
@@ -44,10 +45,99 @@ CI는 GitHub Actions로 돌고, 공개 배포(Vercel / Cloud Run)는 아직입�
 배경 지도는 국토지리원 타일을 브라우저가 직접 받습니다.  
 우리 API는 구 경계(`/boundary`), 건물 그림자(`/shadows`), 경로·급수(`/routes`)만 줍니다.
 
+## 데이터·전처리 (GCE + GCS)
+
+**전처리**는 PLATEAU CityGML·OSM 같은 공개 원본을, API가 읽을 GeoJSON·보행 그래프(`data/processed/`)로 **미리** 바꾸는 배치 작업이다.  
+23区 전체 raw는 수십 GB라 Mac에 두지 않고, **작업용 GCE VM**에서 돌린 뒤 **GCS가 정식 보관소**가 된다. 갱신은 **수동**이다 (스케줄·CI 자동화 없음).
+
+### 저장소 역할
+
+```mermaid
+flowchart TB
+  subgraph public [공개 원본]
+    PLATEAU[PLATEAU CityGML ZIP]
+    OSM[OpenStreetMap]
+  end
+
+  subgraph mac [Mac]
+    CODE[코드·헬퍼 스크립트]
+    PROC_LOCAL["data/processed/tokyo23<br/>(선택, sync-down)"]
+    API_LOCAL[로컬 FastAPI]
+  end
+
+  subgraph gce ["GCE VM (hikage-preprocess)"]
+    PRE["preprocess.py --wards all"]
+    RAW_VM["data/raw<br/>ZIP·해제·캐시"]
+    PROC_VM["data/processed/tokyo23"]
+  end
+
+  subgraph gcs ["GCS gs://PROJECT-data"]
+    GCS_RAW["raw/"]
+    GCS_PROC["processed/tokyo23/"]
+  end
+
+  subgraph deploy [배포 2차 예정]
+    CR[Cloud Run API]
+  end
+
+  PLATEAU --> PRE
+  OSM --> PRE
+  CODE -->|start.sh · SSH| PRE
+  PRE --> RAW_VM
+  PRE --> PROC_VM
+  RAW_VM -->|sync-up.sh| GCS_RAW
+  PROC_VM -->|sync-up.sh| GCS_PROC
+  GCS_PROC -->|sync-down.sh| PROC_LOCAL
+  PROC_LOCAL --> API_LOCAL
+  GCS_PROC -.->|런타임 연동 미구현| CR
+```
+
+### 수동 사이클 (매회)
+
+```mermaid
+sequenceDiagram
+  participant Mac
+  participant VM as GCE VM
+  participant GCS as GCS 버킷
+  participant Src as PLATEAU / OSM
+
+  Mac->>VM: gce-preprocess-start.sh
+  Mac->>VM: SSH · git pull · preprocess.py --wards all
+  Src->>VM: CityGML·OSM 다운로드
+  Note over VM: raw + processed/tokyo23 생성 (수 시간)
+  Mac->>VM: gce-preprocess-sync-up.sh
+  VM->>GCS: gsutil rsync data/raw
+  VM->>GCS: gsutil rsync data/processed/tokyo23
+  Mac->>VM: gce-preprocess-stop.sh
+  opt 로컬 API 검증
+    Mac->>GCS: gce-preprocess-sync-down.sh
+    GCS->>Mac: processed/tokyo23만 (ZIP 미포함)
+  end
+```
+
+| 스크립트 | 역할 |
+| --- | --- |
+| `scripts/gce-preprocess-start.sh` | VM start |
+| `scripts/gce-preprocess-stop.sh` | VM stop (과금 절감) |
+| `scripts/gce-preprocess-sync-up.sh` | VM → GCS (`raw`, `processed/tokyo23`) |
+| `scripts/gce-preprocess-sync-down.sh` | GCS → Mac (`processed/tokyo23`만) |
+
+```bash
+export HIKAGE_GCP_PROJECT=your-gcp-project   # 버킷: gs://${PROJECT}-data
+
+./scripts/gce-preprocess-start.sh
+# VM SSH 후: python api/scripts/preprocess.py --wards all
+./scripts/gce-preprocess-sync-up.sh
+./scripts/gce-preprocess-stop.sh
+./scripts/gce-preprocess-sync-down.sh        # 선택
+```
+
+상세·VM 최초 세팅: [docs/08-gce-preprocess.md](docs/08-gce-preprocess.md).
+
 ## 로컬 실행 (요약)
 
 ```bash
-# API (터미널 1) — tokyo23 데이터가 있으면 자동 인식
+# API (터미널 1) — tokyo23 processed가 있으면 자동 인식
 export HIKAGE_DATA_DIR=/path/to/hikage-navi/data/processed/tokyo23
 cd api && . .venv/bin/activate && uvicorn hikage_navi.app:app --port 8000
 
@@ -55,25 +145,11 @@ cd api && . .venv/bin/activate && uvicorn hikage_navi.app:app --port 8000
 cd web && npm run dev
 ```
 
-**23区 데이터:** Mac에서 `--wards all`을 돌리지 않는다 (디스크 부족).  
-GCE에서 전처리 후 GCS에 올리고, 로컬은 processed만 받는다.
-
-```bash
-export HIKAGE_GCP_PROJECT=your-gcp-project
-./scripts/gce-preprocess-start.sh
-# VM에서 preprocess.py --wards all 실행 → 끝나면
-./scripts/gce-preprocess-sync-up.sh
-./scripts/gce-preprocess-stop.sh
-./scripts/gce-preprocess-sync-down.sh   # Mac에 tokyo23만
-```
-
-상세: [docs/08-gce-preprocess.md](docs/08-gce-preprocess.md).
-
 - API: `http://127.0.0.1:8000` (`/health`, `/docs`)
 - 웹: `http://127.0.0.1:5173`
 
-`data/raw`(CityGML ZIP·압축 해제)는 gitignore이며 **로컬 보관 대상이 아니다**.  
-런타임에 Overpass를 부르지 않는다.
+시부야만 쓸 때는 `HIKAGE_DATA_DIR=.../data/processed`(기본 `shibuya-*` 파일).  
+`data/raw`는 gitignore이며 **Mac에 두지 않는다**. 런타임에 Overpass를 부르지 않는다.
 
 ## CI
 
