@@ -27,7 +27,6 @@ CI는 GitHub Actions로 돌고, 공개 배포(Vercel / Cloud Run)는 아직입�
 
 ## 다음
 
-- 스마트폰 브라우저 UI
 - 대상 지역을 東京23区로 확대
 - 공개 배포: 웹은 Vercel, API는 Cloud Build → Artifact Registry → Cloud Run ([docs/07-gcp-cicd.md](docs/07-gcp-cicd.md))
 
@@ -104,6 +103,6 @@ cd web && npm test
 - [x] 연속 직사광선 · 경로 주변 급수 스팟
 - [x] GitHub Actions CI
 - [x] API Docker / Cloud Build 설정 파일 (`Dockerfile.api`, `cloudbuild.yaml`)
-- [ ] 모바일 웹 UI (태스크 11)
+- [x] 모바일 웹 UI (태스크 11)
 - [ ] 東京23区 확대 (태스크 12–14)
 - [ ] 공개 배포 (Vercel + Cloud Run)
