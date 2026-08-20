@@ -18,6 +18,7 @@ from hikage_navi.routing import (
 )
 from hikage_navi.shadows import BuildingIndex, ShadowIndex, shadow_margin_m
 from hikage_navi.sun import is_night, sun_position
+from hikage_navi.wards import OUTSIDE_MESSAGE
 
 
 DETOUR_MARGIN_M = 300.0
@@ -61,7 +62,7 @@ def plan_routes(
     o_in = point_in_boundary(origin[0], origin[1], boundary)
     d_in = point_in_boundary(destination[0], destination[1], boundary)
     if not o_in or not d_in:
-        raise RouteError("outside", "渋谷区内の2点を指定してください")
+        raise RouteError("outside", OUTSIDE_MESSAGE)
     if haversine_m(origin[0], origin[1], destination[0], destination[1]) > MAX_STRAIGHT_M:
         raise RouteError("too_far", "3km以内で指定してください")
     try:
