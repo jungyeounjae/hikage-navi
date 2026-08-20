@@ -43,7 +43,8 @@ API:    git push → Cloud Build → Artifact Registry → Cloud Run
 asia-northeast1-docker.pkg.dev/<PROJECT>/hikage-navi/api:<git-sha>
 ```
 
-전처리 데이터(`data/`)는 **api 이미지 안에** 넣는다. GCS 버킷은 만들지 않는다.
+전처리 **산출물**(`processed/tokyo23`)은 배포 시 api 이미지에 넣거나, GCS에서 빌드 전에 받는다.  
+**raw**(CityGML ZIP·압축 해제)는 Mac에 두지 않고 GCE VM + GCS에서 관리한다. 절차는 [08-gce-preprocess.md](08-gce-preprocess.md).
 
 쓰지 않는 것: GKE, Cloud SQL, 웹 Docker 이미지, Terraform.
 
@@ -84,13 +85,14 @@ CORS: api는 Vercel origin만 허용. (`https://<project>.vercel.app` 및 커스
 
 ## 6. 개발 순서
 
-1. 로컬에서 지도·그늘·경로가 돈다
-2. API Dockerfile로 로컬 `docker run`이 된다
-3. GCP: Artifact Registry + Cloud Run에 API를 올린다
-4. Vercel에 웹을 올리고 `VITE_API_BASE_URL`을 Cloud Run URL로 넣는다
-5. Cloud Build로 API 배포를 자동화한다
+1. 로컬에서 지도·그늘·경로가 돈다 (시부야 fixtures 또는 GCS에서 받은 tokyo23)
+2. 23区 raw·전처리는 GCE에서 ([08-gce-preprocess.md](08-gce-preprocess.md))
+3. API Dockerfile로 로컬 `docker run`이 된다
+4. GCP: Artifact Registry + Cloud Run에 API를 올린다
+5. Vercel에 웹을 올리고 `VITE_API_BASE_URL`을 Cloud Run URL로 넣는다
+6. Cloud Build로 API 배포를 자동화한다
 
-1이 끝나기 전에 Vercel/GCP를 붙이지 않는다.
+1이 끝나기 전에 Vercel/Cloud Run을 붙이지 않는다. GCE 전처리 버킷·VM은 데이터 준비용으로 먼저 둬도 된다.
 
 ## 7. 사람이 준비할 계정
 
