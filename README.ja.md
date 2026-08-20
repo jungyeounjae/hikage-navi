@@ -86,6 +86,7 @@ cd web && npm test
 | [docs/05-acceptance.md](docs/05-acceptance.md) | 受け入れ基準 |
 | [docs/06-tech-stack.md](docs/06-tech-stack.md) | 技術選定 |
 | [docs/07-gcp-cicd.md](docs/07-gcp-cicd.md) | Vercel / GCP CI/CD |
+| [docs/08-gce-preprocess.md](docs/08-gce-preprocess.md) | GCE 前処理 + GCS 保管 |
 | [docs/superpowers/plans/2026-08-14-hikage-navi-v0.1.md](docs/superpowers/plans/2026-08-14-hikage-navi-v0.1.md) | v0.1 実装計画（タスク 1–14） |
 | [FeatureAddition.md](FeatureAddition.md) | 連続直射日光・給水スポットの要求 |
 | [docs/superpowers/plans/2026-08-18-continuous-sun-water-spots.md](docs/superpowers/plans/2026-08-18-continuous-sun-water-spots.md) | 上記機能の実装計画 |
