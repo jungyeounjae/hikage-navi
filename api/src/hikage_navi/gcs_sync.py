@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 import os
-import sys
 from collections.abc import Mapping
 from pathlib import Path
 
@@ -49,9 +48,11 @@ def write_stamp(data_dir: Path, generation: str) -> None:
 
 
 def local_ready(data_dir: Path) -> bool:
-    return (data_dir / "walk-graph.json").is_file() and (
-        data_dir / "boundary.geojson"
-    ).is_file()
+    return (
+        (data_dir / "walk-graph.json").is_file()
+        and (data_dir / "boundary.geojson").is_file()
+        and (data_dir / "wards").is_dir()
+    )
 
 
 def should_skip_sync(data_dir: Path, remote_generation: str) -> bool:
@@ -67,6 +68,22 @@ def remote_walk_graph_generation(client, bucket_name: str, prefix: str) -> str:
     return str(blob.generation)
 
 
+def _safe_download_dest(data_dir: Path, rel: str) -> Path | None:
+    if not rel:
+        return None
+    if rel.startswith("/") or Path(rel).is_absolute():
+        raise ValueError(f"unsafe gcs object relative path: {rel!r}")
+    root = data_dir.resolve()
+    dest = (data_dir / rel).resolve()
+    try:
+        inner = dest.relative_to(root)
+    except ValueError:
+        raise ValueError(f"gcs object path escapes data_dir: {rel!r}") from None
+    if not inner.parts or str(inner) in {".", ""}:
+        return None
+    return dest
+
+
 def download_prefix(*, client, bucket_name: str, prefix: str, data_dir: Path) -> None:
     bucket = client.bucket(bucket_name)
     list_prefix = prefix if prefix.endswith("/") else prefix + "/"
@@ -76,9 +93,9 @@ def download_prefix(*, client, bucket_name: str, prefix: str, data_dir: Path) ->
         if name.endswith("/"):
             continue
         rel = name[len(list_prefix) :]
-        if not rel:
+        dest = _safe_download_dest(data_dir, rel)
+        if dest is None:
             continue
-        dest = data_dir / rel
         dest.parent.mkdir(parents=True, exist_ok=True)
         blob.download_to_filename(str(dest))
 
@@ -108,7 +125,9 @@ def sync_processed(
     logger.info("gcs_sync download generation=%s uri=%s -> %s", generation, uri, dest)
     download_prefix(client=client, bucket_name=bucket_name, prefix=prefix, data_dir=dest)
     if not local_ready(dest):
-        raise RuntimeError(f"sync incomplete: missing walk-graph/boundary under {dest}")
+        raise RuntimeError(
+            f"sync incomplete: missing walk-graph/boundary/wards under {dest}"
+        )
     write_stamp(dest, generation)
     return "synced"
 

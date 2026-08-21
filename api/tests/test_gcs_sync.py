@@ -50,6 +50,8 @@ def test_should_skip_requires_ready_and_matching_stamp(tmp_path: Path):
     assert should_skip_sync(tmp_path, "9") is False
     (tmp_path / "walk-graph.json").write_text("{}", encoding="utf-8")
     (tmp_path / "boundary.geojson").write_text("{}", encoding="utf-8")
+    assert local_ready(tmp_path) is False
+    (tmp_path / "wards").mkdir()
     assert local_ready(tmp_path) is True
     assert should_skip_sync(tmp_path, "9") is False
     write_stamp(tmp_path, "9")
@@ -76,6 +78,7 @@ def test_sync_processed_skips_when_stamp_matches(tmp_path, monkeypatch):
     monkeypatch.setenv("HIKAGE_GCS_SYNC", "1")
     (tmp_path / "walk-graph.json").write_text("{}", encoding="utf-8")
     (tmp_path / "boundary.geojson").write_text("{}", encoding="utf-8")
+    (tmp_path / "wards").mkdir()
     write_stamp(tmp_path, "42")
 
     walk = _blob("processed/tokyo23/walk-graph.json", generation=42)
@@ -113,3 +116,33 @@ def test_sync_processed_downloads_when_stamp_missing(tmp_path, monkeypatch):
     assert (tmp_path / "walk-graph.json").is_file()
     assert (tmp_path / "wards/13113/buildings.geojson").is_file()
     bucket.list_blobs.assert_called_once_with(prefix=prefix + "/")
+
+
+def test_download_prefix_rejects_path_escape(tmp_path: Path):
+    prefix = "processed/tokyo23"
+    outside = tmp_path.parent / "outside.txt"
+    client = MagicMock()
+    bucket = MagicMock()
+    client.bucket.return_value = bucket
+
+    traversal = _blob(f"{prefix}/../../outside.txt")
+    bucket.list_blobs.return_value = [traversal]
+    with pytest.raises(ValueError, match="escapes|unsafe"):
+        download_prefix(
+            client=client, bucket_name="b", prefix=prefix, data_dir=tmp_path
+        )
+    traversal.download_to_filename.assert_not_called()
+    assert not outside.exists()
+
+    absolute = _blob(f"{prefix}//etc/passwd")
+    bucket.list_blobs.return_value = [absolute]
+    with pytest.raises(ValueError, match="escapes|unsafe"):
+        download_prefix(
+            client=client, bucket_name="b", prefix=prefix, data_dir=tmp_path
+        )
+    absolute.download_to_filename.assert_not_called()
+
+    empty = _blob(f"{prefix}/.")
+    bucket.list_blobs.return_value = [empty]
+    download_prefix(client=client, bucket_name="b", prefix=prefix, data_dir=tmp_path)
+    empty.download_to_filename.assert_not_called()

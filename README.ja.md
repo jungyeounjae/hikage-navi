@@ -10,7 +10,7 @@
 
 ローカルでは Web・API・実データまで動くデモが使えます。  
 23区の前処理は Mac のディスク不足のため **GCE VM + GCS** で行います。  
-CI は GitHub Actions、公開デプロイ（Vercel / Cloud Run）はまだです。
+CI は GitHub Actions です。API は Cloud Run 起動時に GCS の `processed/tokyo23` を sync します。Web の公開デプロイ（Vercel）はまだです。
 
 ## いまできること
 
@@ -28,7 +28,7 @@ CI は GitHub Actions、公開デプロイ（Vercel / Cloud Run）はまだで�
 
 ## 次にやること
 
-- 公開デプロイ: Web は Vercel、API は Cloud Build → Artifact Registry → Cloud Run（[docs/07-gcp-cicd.md](docs/07-gcp-cicd.md)）
+- Web の公開デプロイ: Vercel（[docs/07-gcp-cicd.md](docs/07-gcp-cicd.md)）— まだ
 - 23区の raw・前処理は GCE VM + GCS（[docs/08-gce-preprocess.md](docs/08-gce-preprocess.md)）— Mac に `data/raw` を置かない
 
 ## 技術
@@ -39,7 +39,7 @@ CI は GitHub Actions、公開デプロイ（Vercel / Cloud Run）はまだで�
 | API | Python, FastAPI |
 | CI | GitHub Actions（`pytest` + `vitest`） |
 | Web の公開 | Vercel（予定） |
-| API の公開 | Cloud Build → Artifact Registry → Cloud Run（予定） |
+| API の公開 | Cloud Build → Artifact Registry → Cloud Run（起動時 GCS sync） |
 | 前処理データ | GCE（作業）+ GCS（保管） |
 
 背景地図は国土地理院タイルをブラウザが直接取得します。  
@@ -76,7 +76,7 @@ flowchart TB
     GCS_PROC["processed/tokyo23/"]
   end
 
-  subgraph deploy [デプロイ第2段 予定]
+  subgraph deploy [Cloud Run]
     CR[Cloud Run API]
   end
 
@@ -89,7 +89,7 @@ flowchart TB
   PROC_VM -->|sync-up.sh| GCS_PROC
   GCS_PROC -->|sync-down.sh| PROC_LOCAL
   PROC_LOCAL --> API_LOCAL
-  GCS_PROC -.->|ランタイム連携未実装| CR
+  GCS_PROC -->|起動時 sync| CR
 ```
 
 ### 手動サイクル（毎回）
@@ -198,4 +198,5 @@ cd web && npm test
 - [x] モバイル Web UI（タスク 11）
 - [x] 東京23区への拡大（タスク 12–14）
 - [x] GCE 前処理・GCS 保管の文書・スクリプト
-- [ ] 公開デプロイ（Vercel + Cloud Run）
+- [x] API Cloud Run ・起動時 GCS sync
+- [ ] Web の公開デプロイ（Vercel）
