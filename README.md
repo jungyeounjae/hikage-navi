@@ -10,7 +10,7 @@
 
 로컬에서 웹·API·실데이터까지 동작하는 데모를 사용할 수 있습니다.  
 23区 전처리는 Mac 디스크 한계 때문에 **GCE VM + GCS**로 돌립니다.  
-CI는 GitHub Actions, 공개 배포(Vercel / Cloud Run)는 아직입니다.
+CI는 GitHub Actions입니다. API는 Cloud Run에서 기동 시 GCS `processed/tokyo23`을 sync합니다. 웹 공개 배포(Vercel)는 아직입니다.
 
 ## 하는 일 (지금)
 
@@ -28,7 +28,7 @@ CI는 GitHub Actions, 공개 배포(Vercel / Cloud Run)는 아직입니다.
 
 ## 다음
 
-- 공개 배포: 웹은 Vercel, API는 Cloud Build → Artifact Registry → Cloud Run ([docs/07-gcp-cicd.md](docs/07-gcp-cicd.md))
+- 웹 공개 배포: Vercel ([docs/07-gcp-cicd.md](docs/07-gcp-cicd.md)) — 아직
 - 23区 raw·전처리는 GCE VM + GCS ([docs/08-gce-preprocess.md](docs/08-gce-preprocess.md)) — Mac에 `data/raw`를 두지 않음
 
 ## 기술
@@ -39,7 +39,7 @@ CI는 GitHub Actions, 공개 배포(Vercel / Cloud Run)는 아직입니다.
 | API | Python, FastAPI |
 | CI | GitHub Actions (`pytest` + `vitest`) |
 | 웹 배포 | Vercel (예정) |
-| API 배포 | Cloud Build → Artifact Registry → Cloud Run (예정) |
+| API 배포 | Cloud Build → Artifact Registry → Cloud Run (기동 시 GCS sync) |
 | 전처리 데이터 | GCE (작업) + GCS (보관) |
 
 배경 지도는 국토지리원 타일을 브라우저가 직접 받습니다.  
@@ -76,7 +76,7 @@ flowchart TB
     GCS_PROC["processed/tokyo23/"]
   end
 
-  subgraph deploy [배포 2차 예정]
+  subgraph deploy [Cloud Run]
     CR[Cloud Run API]
   end
 
@@ -89,7 +89,7 @@ flowchart TB
   PROC_VM -->|sync-up.sh| GCS_PROC
   GCS_PROC -->|sync-down.sh| PROC_LOCAL
   PROC_LOCAL --> API_LOCAL
-  GCS_PROC -.->|런타임 연동 미구현| CR
+  GCS_PROC -->|기동 시 sync| CR
 ```
 
 ### 수동 사이클 (매회)
@@ -199,4 +199,5 @@ cd web && npm test
 - [x] 東京23区 문안·전처리 (태스크 12–13)
 - [x] 東京23区 런타임 로드 (태스크 14)
 - [x] GCE 전처리·GCS 보관 문서·스크립트
-- [ ] 공개 배포 (Vercel + Cloud Run)
+- [x] API Cloud Run · 기동 시 GCS sync
+- [ ] 웹 공개 배포 (Vercel)

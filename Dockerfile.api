@@ -12,11 +12,11 @@ COPY api/pyproject.toml ./api/
 COPY api/src ./api/src
 RUN pip install --no-cache-dir ./api
 
-COPY data/processed /app/data/processed
-
-ENV HIKAGE_DATA_DIR=/app/data/processed
+ENV HIKAGE_DATA_DIR=/data/tokyo23
+ENV HIKAGE_GCS_PROCESSED_URI=gs://hikage-navi-data/processed/tokyo23
+ENV HIKAGE_GCS_SYNC=1
 ENV PORT=8080
 
 EXPOSE 8080
 
-CMD ["sh", "-c", "uvicorn hikage_navi.app:app --host 0.0.0.0 --port ${PORT}"]
+CMD ["sh", "-c", "python -m hikage_navi.gcs_sync && exec uvicorn hikage_navi.app:app --host 0.0.0.0 --port ${PORT}"]
