@@ -35,7 +35,7 @@ API:    git push → Cloud Build → Artifact Registry → Cloud Run
 | --- | --- |
 | **Artifact Registry** | `api` Docker 이미지만 저장 |
 | **Cloud Build** | API 빌드·푸시·Cloud Run 배포 |
-| **Cloud Run** | FastAPI 실행. 최소 인스턴스 0, 메모리 1Gi, `asia-northeast1` |
+| **Cloud Run** | FastAPI 실행. 최소 인스턴스 0, 메모리 2Gi, `asia-northeast1` |
 
 아티팩트:
 
@@ -43,7 +43,10 @@ API:    git push → Cloud Build → Artifact Registry → Cloud Run
 asia-northeast1-docker.pkg.dev/<PROJECT>/hikage-navi/api:<git-sha>
 ```
 
-전처리 **산출물**(`processed/tokyo23`)은 배포 시 api 이미지에 넣거나, GCS에서 빌드 전에 받는다.  
+전처리 **산출물**(`processed/tokyo23`)은 **이미지에 넣지 않는다**. Cloud Run 기동 시 `hikage_navi.gcs_sync`가 `gs://hikage-navi-data/processed/tokyo23`을 `/data/tokyo23`으로 받는다.
+
+Cloud Run 런타임 서비스 계정에는 버킷 `hikage-navi-data`에 대해 `roles/storage.objectViewer`가 필요하다. 배포 env는 `HIKAGE_DATA_DIR`, `HIKAGE_GCS_PROCESSED_URI`, `HIKAGE_GCS_SYNC`다.
+
 **raw**(CityGML ZIP·압축 해제)는 Mac에 두지 않고 GCE VM + GCS에서 관리한다. 절차는 [08-gce-preprocess.md](08-gce-preprocess.md).
 
 쓰지 않는 것: GKE, Cloud SQL, 웹 Docker 이미지, Terraform.

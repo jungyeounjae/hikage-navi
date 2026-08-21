@@ -6,6 +6,8 @@
 Mac 디스크에 `data/raw`(CityGML ZIP·압축 해제)를 **두지 않는다**.  
 전처리는 GCE VM에서 돌리고, 결과는 GCS에 보관한다. VM은 **필요할 때만 start**, 끝나면 **stop**.
 
+Cloud Run API는 기동 시 GCS `processed/tokyo23`만 sync한다. 절차·환경 변수는 [07-gcp-cicd.md](07-gcp-cicd.md).
+
 ## 1. 한 번만: GCP 준비
 
 결제 계정이 연결된 프로젝트에서:
