@@ -5,6 +5,7 @@ import pytest
 
 from hikage_navi.graph import (
     SnapError,
+    build_snap_index,
     load_walk_graph,
     snap_to_node,
     subgraph_in_bbox,
@@ -25,6 +26,43 @@ def test_snap_near_node_2():
     node_id, dist = snap_to_node(g, 139.70160, 35.65800)
     assert node_id == 2
     assert dist < 1.0
+
+
+def test_snap_matches_bruteforce_on_fixture():
+    g = load_walk_graph(FIXTURE)
+    build_snap_index(g)
+    for lon, lat in [(139.70160, 35.65800), (139.70155, 35.65890), (139.70265, 35.65710)]:
+        try:
+            a, da = snap_to_node(g, lon, lat)
+            indexed = (a, round(da, 6))
+        except SnapError:
+            indexed = None
+        cells = g._cells
+        g._cells = None
+        try:
+            b, db = snap_to_node(g, lon, lat)
+            brute = (b, round(db, 6))
+        except SnapError:
+            brute = None
+        g._cells = cells
+        assert indexed == brute
+
+
+def test_snap_tie_prefers_smaller_node_id(tmp_path: Path):
+    payload = {
+        "nodes": [
+            {"id": 10, "lon": 139.7016, "lat": 35.6580},
+            {"id": 2, "lon": 139.7016, "lat": 35.6580},
+        ],
+        "edges": [],
+    }
+    path = tmp_path / "tie.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    g = load_walk_graph(path)
+    build_snap_index(g)
+    nid, dist = snap_to_node(g, 139.7016, 35.6580)
+    assert nid == 2
+    assert dist == 0.0
 
 
 def test_snap_too_far_raises():
