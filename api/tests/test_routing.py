@@ -4,7 +4,7 @@ import pytest
 from shapely.geometry import box
 
 from hikage_navi.geo import haversine_m
-from hikage_navi.graph import Edge, load_walk_graph
+from hikage_navi.graph import Edge, build_adjacency, load_walk_graph
 from hikage_navi.routing import (
     DisconnectedError,
     edge_shade_split,
@@ -34,6 +34,13 @@ def test_shortest_1_to_3():
     assert result.distance_m > 0
     assert result.duration_min >= 1
     assert result.shade_pct == 0
+
+
+def test_shortest_ignores_networkx_graph_rebuild():
+    """요청마다 nx.Graph를 만들지 않아도 픽스처 최단이 같다."""
+    g = load_walk_graph(FIXTURE)
+    assert getattr(g, "adj", None) is not None
+    assert shortest_path(g, 1, 3).node_ids == [1, 2, 3]
 
 
 def test_shortest_without_shadows_has_zero_continuous_sun():
@@ -84,5 +91,6 @@ def test_shadiest_accepts_shadow_index():
 def test_disconnected_raises():
     g = load_walk_graph(FIXTURE)
     g.edges = g.edges[:1]
+    build_adjacency(g)
     with pytest.raises(DisconnectedError):
         shortest_path(g, 1, 3)

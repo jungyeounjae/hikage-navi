@@ -1,14 +1,14 @@
 from __future__ import annotations
 
+import heapq
 import math
 from dataclasses import dataclass
 
-import networkx as nx
 from shapely.geometry.base import BaseGeometry
 
 from hikage_navi.constants import ALPHA_SHADE, WALK_M_PER_MIN
 from hikage_navi.exposure import sun_seconds
-from hikage_navi.graph import Edge, WalkGraph
+from hikage_navi.graph import Edge, WalkGraph, build_adjacency
 from hikage_navi.shadows import ShadowIndex
 
 
@@ -102,13 +102,43 @@ def _metrics(
     )
 
 
-def _nx_graph(graph: WalkGraph, weight_fn) -> nx.Graph:
-    G = nx.Graph()
-    for nid, (lon, lat) in graph.nodes.items():
-        G.add_node(nid, lon=lon, lat=lat)
-    for e in graph.edges:
-        G.add_edge(e.u, e.v, weight=weight_fn(e), edge=e)
-    return G
+def _dijkstra(graph: WalkGraph, src: int, dst: int, weight_fn) -> list[int]:
+    if graph.adj is None:
+        build_adjacency(graph)
+    adj = graph.adj
+    if src not in adj or dst not in adj:
+        raise DisconnectedError()
+
+    dist = {src: 0.0}
+    prev: dict[int, int | None] = {src: None}
+    heap: list[tuple[float, int]] = [(0.0, src)]
+    seen: set[int] = set()
+
+    while heap:
+        distance, node = heapq.heappop(heap)
+        if node in seen:
+            continue
+        seen.add(node)
+        if node == dst:
+            break
+        for neighbor, edge in adj[node]:
+            weight = max(0.0, float(weight_fn(edge)))
+            candidate = distance + weight
+            if candidate < dist.get(neighbor, float("inf")):
+                dist[neighbor] = candidate
+                prev[neighbor] = node
+                heapq.heappush(heap, (candidate, neighbor))
+
+    if dst not in prev:
+        raise DisconnectedError()
+
+    path: list[int] = []
+    current: int | None = dst
+    while current is not None:
+        path.append(current)
+        current = prev[current]
+    path.reverse()
+    return path
 
 
 def _path(
@@ -119,11 +149,7 @@ def _path(
     shade_map: dict[Pair, float],
     index: ShadowIndex | None,
 ) -> PathResult:
-    G = _nx_graph(graph, weight_fn)
-    try:
-        nodes = nx.shortest_path(G, src, dst, weight="weight")
-    except (nx.NetworkXNoPath, nx.NodeNotFound) as exc:
-        raise DisconnectedError() from exc
+    nodes = _dijkstra(graph, src, dst, weight_fn)
     return _metrics(graph, nodes, shade_map, index)
 
 

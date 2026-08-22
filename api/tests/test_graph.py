@@ -77,6 +77,7 @@ def test_subgraph_keeps_only_edges_inside_bbox():
     tiny = subgraph_in_bbox(g, (lon2 - 1e-5, lat2 - 1e-5, lon2 + 1e-5, lat2 + 1e-5))
     assert set(tiny.nodes) == {2}
     assert tiny.edges == []
+    assert tiny.adj == {2: []}
 
 
 def test_subgraph_keeps_everything_when_bbox_covers_all():
@@ -84,6 +85,8 @@ def test_subgraph_keeps_everything_when_bbox_covers_all():
     whole = subgraph_in_bbox(g, (139.60, 35.60, 139.80, 35.70))
     assert set(whole.nodes) == set(g.nodes)
     assert len(whole.edges) == len(g.edges)
+    assert whole.adj is not None
+    assert [neighbor for neighbor, _ in whole.adj[2]] == [1, 3]
 
 
 def test_load_uses_length_m_when_present(tmp_path: Path):

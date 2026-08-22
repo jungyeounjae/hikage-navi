@@ -25,6 +25,7 @@ class Edge:
 class WalkGraph:
     nodes: dict[int, tuple[float, float]]
     edges: list[Edge]
+    adj: dict[int, list[tuple[int, Edge]]] | None = field(default=None, repr=False)
     _cells: dict[tuple[int, int], list[int]] | None = field(default=None, repr=False)
     _cell_m: float | None = field(default=None, repr=False)
 
@@ -44,6 +45,7 @@ def load_walk_graph(path: Path) -> WalkGraph:
         edges.append(Edge(u=int(e["u"]), v=int(e["v"]), coords=coords, length_m=length))
     graph = WalkGraph(nodes=nodes, edges=edges)
     build_snap_index(graph)
+    build_adjacency(graph)
     return graph
 
 
@@ -56,7 +58,18 @@ def subgraph_in_bbox(graph: WalkGraph, bbox: tuple[float, float, float, float]) 
         if min_lon <= lon <= max_lon and min_lat <= lat <= max_lat
     }
     edges = [e for e in graph.edges if e.u in nodes and e.v in nodes]
-    return WalkGraph(nodes=nodes, edges=edges)
+    area = WalkGraph(nodes=nodes, edges=edges)
+    build_adjacency(area)
+    return area
+
+
+def build_adjacency(graph: WalkGraph) -> None:
+    adj: dict[int, list[tuple[int, Edge]]] = {nid: [] for nid in graph.nodes}
+    for edge in graph.edges:
+        if edge.u in adj and edge.v in adj:
+            adj[edge.u].append((edge.v, edge))
+            adj[edge.v].append((edge.u, edge))
+    graph.adj = adj
 
 
 def build_snap_index(graph: WalkGraph, cell_m: float = SNAP_GRID_CELL_M) -> None:
