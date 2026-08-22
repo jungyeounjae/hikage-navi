@@ -84,8 +84,8 @@ Cloud Run 컨테이너
 
 | 항목 | 값 |
 | --- | --- |
-| memory | **2Gi** (OOM 시 4Gi) |
-| cpu | 1 (필요 시 2) |
+| memory | **4Gi** |
+| cpu | **2** |
 | env | `HIKAGE_DATA_DIR=/data/tokyo23`, `HIKAGE_GCS_PROCESSED_URI=gs://hikage-navi-data/processed/tokyo23`, `HIKAGE_GCS_SYNC=1` |
 | request timeout | **≥ 300s** (콜드 스타트 + 첫 sync) |
 | min-instances | 0 |

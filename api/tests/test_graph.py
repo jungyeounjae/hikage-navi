@@ -10,6 +10,7 @@ from hikage_navi.graph import (
     snap_to_node,
     subgraph_in_bbox,
 )
+from hikage_navi.geo import from_planar, to_planar
 
 FIXTURE = Path(__file__).resolve().parents[2] / "data/fixtures/shibuya-walk-graph.json"
 
@@ -46,6 +47,39 @@ def test_snap_matches_bruteforce_on_fixture():
             brute = None
         g._cells = cells
         assert indexed == brute
+
+
+def test_snap_matches_bruteforce_across_cell_boundary(tmp_path: Path):
+    query = from_planar(-12010.0, -37750.0)
+    nearest = from_planar(-11940.0, -37750.0)
+    decoy = from_planar(-12084.0, -37750.0)
+    payload = {
+        "nodes": [
+            {"id": 1, "lon": nearest[0], "lat": nearest[1]},
+            {"id": 2, "lon": decoy[0], "lat": decoy[1]},
+        ],
+        "edges": [],
+    }
+    path = tmp_path / "cross-cell.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    g = load_walk_graph(path)
+    qx, qy = to_planar(*query)
+    nx, ny = to_planar(*nearest)
+    assert (int(qx // g._cell_m), int(qy // g._cell_m)) != (
+        int(nx // g._cell_m),
+        int(ny // g._cell_m),
+    )
+
+    indexed = snap_to_node(g, *query)
+    cells = g._cells
+    g._cells = None
+    brute = snap_to_node(g, *query)
+    g._cells = cells
+
+    assert indexed[0] == brute[0] == 1
+    assert indexed[1] == pytest.approx(brute[1])
+    assert indexed[1] == pytest.approx(70.0, abs=0.5)
 
 
 def test_snap_tie_prefers_smaller_node_id(tmp_path: Path):
