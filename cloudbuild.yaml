@@ -48,8 +48,8 @@ steps:
       - --region=${_REGION}
       - --platform=managed
       - --allow-unauthenticated
-      - --memory=2Gi
-      - --cpu=1
+      - --memory=4Gi
+      - --cpu=2
       - --min-instances=0
       - --max-instances=3
       - --port=8080
