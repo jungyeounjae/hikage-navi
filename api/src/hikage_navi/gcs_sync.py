@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import os
 from collections.abc import Mapping
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 DEFAULT_GCS_URI = "gs://hikage-navi-data/processed/tokyo23"
@@ -84,10 +85,18 @@ def _safe_download_dest(data_dir: Path, rel: str) -> Path | None:
     return dest
 
 
-def download_prefix(*, client, bucket_name: str, prefix: str, data_dir: Path) -> None:
+def download_prefix(
+    *,
+    client,
+    bucket_name: str,
+    prefix: str,
+    data_dir: Path,
+    max_workers: int = 8,
+) -> None:
     bucket = client.bucket(bucket_name)
     list_prefix = prefix if prefix.endswith("/") else prefix + "/"
     data_dir.mkdir(parents=True, exist_ok=True)
+    jobs: list[tuple[object, Path]] = []
     for blob in bucket.list_blobs(prefix=list_prefix):
         name = blob.name
         if name.endswith("/"):
@@ -97,7 +106,17 @@ def download_prefix(*, client, bucket_name: str, prefix: str, data_dir: Path) ->
         if dest is None:
             continue
         dest.parent.mkdir(parents=True, exist_ok=True)
+        jobs.append((blob, dest))
+
+    def _one(item: tuple[object, Path]) -> None:
+        blob, dest = item
         blob.download_to_filename(str(dest))
+
+    workers = max(1, min(max_workers, len(jobs) or 1))
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        futures = [pool.submit(_one, job) for job in jobs]
+        for fut in as_completed(futures):
+            fut.result()
 
 
 def sync_processed(
