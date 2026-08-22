@@ -32,9 +32,12 @@ def load_walk_graph(path: Path) -> WalkGraph:
     edges: list[Edge] = []
     for e in raw["edges"]:
         coords = [(float(c[0]), float(c[1])) for c in e["coords"]]
-        length = 0.0
-        for a, b in zip(coords, coords[1:]):
-            length += haversine_m(a[0], a[1], b[0], b[1])
+        if "length_m" in e and e["length_m"] is not None:
+            length = float(e["length_m"])
+        else:
+            length = 0.0
+            for a, b in zip(coords, coords[1:]):
+                length += haversine_m(a[0], a[1], b[0], b[1])
         edges.append(Edge(u=int(e["u"]), v=int(e["v"]), coords=coords, length_m=length))
     return WalkGraph(nodes=nodes, edges=edges)
 

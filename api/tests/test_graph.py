@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import pytest
@@ -45,3 +46,32 @@ def test_subgraph_keeps_everything_when_bbox_covers_all():
     whole = subgraph_in_bbox(g, (139.60, 35.60, 139.80, 35.70))
     assert set(whole.nodes) == set(g.nodes)
     assert len(whole.edges) == len(g.edges)
+
+
+def test_load_uses_length_m_when_present(tmp_path: Path):
+    payload = {
+        "nodes": [{"id": 1, "lon": 139.0, "lat": 35.0}, {"id": 2, "lon": 139.1, "lat": 35.0}],
+        "edges": [
+            {
+                "u": 1,
+                "v": 2,
+                "coords": [[139.0, 35.0], [139.1, 35.0]],
+                "length_m": 12.5,
+            }
+        ],
+    }
+    path = tmp_path / "g.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    g = load_walk_graph(path)
+    assert g.edges[0].length_m == 12.5
+
+
+def test_load_computes_length_when_missing(tmp_path: Path):
+    payload = {
+        "nodes": [{"id": 1, "lon": 139.7016, "lat": 35.6580}, {"id": 2, "lon": 139.7027, "lat": 35.6580}],
+        "edges": [{"u": 1, "v": 2, "coords": [[139.7016, 35.6580], [139.7027, 35.6580]]}],
+    }
+    path = tmp_path / "g.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    g = load_walk_graph(path)
+    assert g.edges[0].length_m > 50.0
