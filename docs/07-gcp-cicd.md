@@ -35,7 +35,7 @@ API:    git push → Cloud Build → Artifact Registry → Cloud Run
 | --- | --- |
 | **Artifact Registry** | `api` Docker 이미지만 저장 |
 | **Cloud Build** | API 빌드·푸시·Cloud Run 배포 |
-| **Cloud Run** | FastAPI 실행. 최소 인스턴스 0, 메모리 2Gi, `asia-northeast1` |
+| **Cloud Run** | FastAPI 실행. min-instances 0, memory 4Gi, CPU 2, `asia-northeast1` |
 
 아티팩트:
 
@@ -46,6 +46,8 @@ asia-northeast1-docker.pkg.dev/<PROJECT>/hikage-navi/api:<git-sha>
 전처리 **산출물**(`processed/tokyo23`)은 **이미지에 넣지 않는다**. Cloud Run 기동 시 `hikage_navi.gcs_sync`가 `gs://hikage-navi-data/processed/tokyo23`을 `/data/tokyo23`으로 받는다.
 
 Cloud Run 런타임 서비스 계정에는 버킷 `hikage-navi-data`에 대해 `roles/storage.objectViewer`가 필요하다. 배포 env는 `HIKAGE_DATA_DIR`, `HIKAGE_GCS_PROCESSED_URI`, `HIKAGE_GCS_SYNC`다.
+
+지연 목표(warm): `/routes` ≤ 8s, `/shadows` ≤ 5s. 콜드 첫 요청(GCS sync + 그래프 로드) ≤ 25s. 상세는 [2026-08-22-api-latency-warm-cold-design.md](superpowers/specs/2026-08-22-api-latency-warm-cold-design.md).
 
 **raw**(CityGML ZIP·압축 해제)는 Mac에 두지 않고 GCE VM + GCS에서 관리한다. 절차는 [08-gce-preprocess.md](08-gce-preprocess.md).
 

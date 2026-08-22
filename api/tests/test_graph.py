@@ -1,13 +1,16 @@
+import json
 from pathlib import Path
 
 import pytest
 
 from hikage_navi.graph import (
     SnapError,
+    build_snap_index,
     load_walk_graph,
     snap_to_node,
     subgraph_in_bbox,
 )
+from hikage_navi.geo import from_planar, to_planar
 
 FIXTURE = Path(__file__).resolve().parents[2] / "data/fixtures/shibuya-walk-graph.json"
 
@@ -26,6 +29,76 @@ def test_snap_near_node_2():
     assert dist < 1.0
 
 
+def test_snap_matches_bruteforce_on_fixture():
+    g = load_walk_graph(FIXTURE)
+    build_snap_index(g)
+    for lon, lat in [(139.70160, 35.65800), (139.70155, 35.65890), (139.70265, 35.65710)]:
+        try:
+            a, da = snap_to_node(g, lon, lat)
+            indexed = (a, round(da, 6))
+        except SnapError:
+            indexed = None
+        cells = g._cells
+        g._cells = None
+        try:
+            b, db = snap_to_node(g, lon, lat)
+            brute = (b, round(db, 6))
+        except SnapError:
+            brute = None
+        g._cells = cells
+        assert indexed == brute
+
+
+def test_snap_matches_bruteforce_across_cell_boundary(tmp_path: Path):
+    query = from_planar(-12010.0, -37750.0)
+    nearest = from_planar(-11940.0, -37750.0)
+    decoy = from_planar(-12084.0, -37750.0)
+    payload = {
+        "nodes": [
+            {"id": 1, "lon": nearest[0], "lat": nearest[1]},
+            {"id": 2, "lon": decoy[0], "lat": decoy[1]},
+        ],
+        "edges": [],
+    }
+    path = tmp_path / "cross-cell.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    g = load_walk_graph(path)
+    qx, qy = to_planar(*query)
+    nx, ny = to_planar(*nearest)
+    assert (int(qx // g._cell_m), int(qy // g._cell_m)) != (
+        int(nx // g._cell_m),
+        int(ny // g._cell_m),
+    )
+
+    indexed = snap_to_node(g, *query)
+    cells = g._cells
+    g._cells = None
+    brute = snap_to_node(g, *query)
+    g._cells = cells
+
+    assert indexed[0] == brute[0] == 1
+    assert indexed[1] == pytest.approx(brute[1])
+    assert indexed[1] == pytest.approx(70.0, abs=0.5)
+
+
+def test_snap_tie_prefers_smaller_node_id(tmp_path: Path):
+    payload = {
+        "nodes": [
+            {"id": 10, "lon": 139.7016, "lat": 35.6580},
+            {"id": 2, "lon": 139.7016, "lat": 35.6580},
+        ],
+        "edges": [],
+    }
+    path = tmp_path / "tie.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    g = load_walk_graph(path)
+    build_snap_index(g)
+    nid, dist = snap_to_node(g, 139.7016, 35.6580)
+    assert nid == 2
+    assert dist == 0.0
+
+
 def test_snap_too_far_raises():
     g = load_walk_graph(FIXTURE)
     with pytest.raises(SnapError):
@@ -38,6 +111,7 @@ def test_subgraph_keeps_only_edges_inside_bbox():
     tiny = subgraph_in_bbox(g, (lon2 - 1e-5, lat2 - 1e-5, lon2 + 1e-5, lat2 + 1e-5))
     assert set(tiny.nodes) == {2}
     assert tiny.edges == []
+    assert tiny.adj == {2: []}
 
 
 def test_subgraph_keeps_everything_when_bbox_covers_all():
@@ -45,3 +119,34 @@ def test_subgraph_keeps_everything_when_bbox_covers_all():
     whole = subgraph_in_bbox(g, (139.60, 35.60, 139.80, 35.70))
     assert set(whole.nodes) == set(g.nodes)
     assert len(whole.edges) == len(g.edges)
+    assert whole.adj is not None
+    assert [neighbor for neighbor, _ in whole.adj[2]] == [1, 3]
+
+
+def test_load_uses_length_m_when_present(tmp_path: Path):
+    payload = {
+        "nodes": [{"id": 1, "lon": 139.0, "lat": 35.0}, {"id": 2, "lon": 139.1, "lat": 35.0}],
+        "edges": [
+            {
+                "u": 1,
+                "v": 2,
+                "coords": [[139.0, 35.0], [139.1, 35.0]],
+                "length_m": 12.5,
+            }
+        ],
+    }
+    path = tmp_path / "g.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    g = load_walk_graph(path)
+    assert g.edges[0].length_m == 12.5
+
+
+def test_load_computes_length_when_missing(tmp_path: Path):
+    payload = {
+        "nodes": [{"id": 1, "lon": 139.7016, "lat": 35.6580}, {"id": 2, "lon": 139.7027, "lat": 35.6580}],
+        "edges": [{"u": 1, "v": 2, "coords": [[139.7016, 35.6580], [139.7027, 35.6580]]}],
+    }
+    path = tmp_path / "g.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    g = load_walk_graph(path)
+    assert g.edges[0].length_m > 50.0

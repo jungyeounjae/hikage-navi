@@ -34,6 +34,8 @@ import zipfile
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
+from hikage_navi.geo import haversine_m
+
 try:
     from hikage_navi.wards import TOKYO_23_WARD_CODES
 except ImportError:  # editable 미설치·병합 전 최소 폴백
@@ -465,7 +467,11 @@ def _graph_to_walk_json(G, out: Path) -> None:
                 (float(G.nodes[u]["x"]), float(G.nodes[u]["y"])),
                 (float(G.nodes[v]["x"]), float(G.nodes[v]["y"])),
             ]
-        edges.append({"u": a, "v": b, "coords": coords})
+        length_m = sum(
+            haversine_m(start[0], start[1], end[0], end[1])
+            for start, end in zip(coords, coords[1:])
+        )
+        edges.append({"u": a, "v": b, "coords": coords, "length_m": length_m})
 
     out.write_text(
         json.dumps({"nodes": nodes, "edges": edges}, ensure_ascii=False),

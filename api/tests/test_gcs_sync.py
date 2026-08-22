@@ -1,5 +1,6 @@
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -116,6 +117,35 @@ def test_sync_processed_downloads_when_stamp_missing(tmp_path, monkeypatch):
     assert (tmp_path / "walk-graph.json").is_file()
     assert (tmp_path / "wards/13113/buildings.geojson").is_file()
     bucket.list_blobs.assert_called_once_with(prefix=prefix + "/")
+
+
+def test_download_prefix_uses_thread_pool(tmp_path: Path, monkeypatch):
+    prefix = "processed/tokyo23"
+    blobs = [
+        _blob(f"{prefix}/walk-graph.json"),
+        _blob(f"{prefix}/boundary.geojson"),
+        _blob(f"{prefix}/wards/13113/buildings.geojson"),
+    ]
+    for b in blobs:
+
+        def _dl(path, blob=b):
+            Path(path).parent.mkdir(parents=True, exist_ok=True)
+            Path(path).write_text("x", encoding="utf-8")
+
+        b.download_to_filename.side_effect = _dl
+
+    client = MagicMock()
+    bucket = MagicMock()
+    client.bucket.return_value = bucket
+    bucket.list_blobs.return_value = blobs
+
+    with patch("hikage_navi.gcs_sync.ThreadPoolExecutor", wraps=ThreadPoolExecutor) as pooled:
+        download_prefix(
+            client=client, bucket_name="b", prefix=prefix, data_dir=tmp_path, max_workers=4
+        )
+    assert pooled.call_count >= 1
+    for b in blobs:
+        assert b.download_to_filename.call_count == 1
 
 
 def test_download_prefix_rejects_path_escape(tmp_path: Path):
